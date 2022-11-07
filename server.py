@@ -31,18 +31,16 @@ class Server(threading.Thread):
         while True:
             try:
                 if self.stopped():
-                    print("Stopped")
                     time.sleep(0.5)
                     continue
 
                 message, address = self.server.recvfrom(1024)
-                print("Running")
                 clientMsg = "Client Message: {}".format(message)
-                clientIP = "Client IP Address: {]".format(address)
+                clientIP = "Client IP Address: {}".format(address)
 
                 print(clientMsg)
                 print(clientIP)
-                # self.server.sendto(bytes('lol'), address)
+                self.server.sendto('lol'.encode('utf-8'), address)
             except TimeoutError:
                 continue
 
