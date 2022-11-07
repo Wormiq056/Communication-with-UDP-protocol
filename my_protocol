@@ -1,0 +1,37 @@
+This is an explanation of my protocol. I decided to implement this by a system that first client sends a packet with information
+about the next packet that will contain data and a server has to acknowledge both the first message and also the data message
+If that doesnt happen the server will requests to recieve the message again
+
+PACKET:
+
+|packet type|msg type|frag num|msg length|data|
+packet type (2 bytes) = ACK, FIN, HEADER, DATA
+msg type (2 bytes) = FILE, TEXT, NONE, FAIL
+frag num (5 bytes) = num of current fragment that is beeing sent
+msg length (4 bytes) = length of data part
+data (0-1000 bytes )= actuall data we want to sent
+
+HEADER-SIZE = 13 B
+
+
+----packet type----
+ACK = 00
+FIN = 01
+HEADER = 10
+DATA = 11
+
+----msg type----
+NONE = 00
+TXT = 01
+FILE = 10
+FAIL = 11
+
+---frag num----
+just a number x  (0 <x> 100000)
+
+---msg length---
+number greater than 0 and lower than 1001
+
+---data---
+actuall data beeing sent
+max length 1000bytes
