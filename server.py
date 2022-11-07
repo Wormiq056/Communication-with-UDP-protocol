@@ -1,5 +1,8 @@
 import socket
 import threading
+import sys
+import time
+
 
 class Server(threading.Thread):
     TARGET_HOST = "127.0.0.1"
@@ -18,7 +21,7 @@ class Server(threading.Thread):
         self._stop.clear()
 
     def pause(self):
-        print("Server has been stopped")
+        print("Server has been paused")
         self._stop.set()
 
     def stopped(self):
@@ -28,10 +31,12 @@ class Server(threading.Thread):
         while True:
             try:
                 if self.stopped():
+                    print("Stopped")
+                    time.sleep(0.5)
                     continue
 
                 message, address = self.server.recvfrom(1024)
-
+                print("Running")
                 clientMsg = "Client Message: {}".format(message)
                 clientIP = "Client IP Address: {]".format(address)
 
@@ -40,3 +45,7 @@ class Server(threading.Thread):
                 # self.server.sendto(bytes('lol'), address)
             except TimeoutError:
                 continue
+
+    def close(self):
+        print('test')
+        sys.exit()
