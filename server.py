@@ -1,6 +1,5 @@
 import socket
 import threading
-import sys
 from time import sleep
 from consts import FORMAT, PROTOCOL_SIZE
 from client_handler import ClientHandler
@@ -8,12 +7,13 @@ from client_handler import ClientHandler
 
 class Server(threading.Thread):
     TARGET_HOST = "127.0.0.1"
-    TARGET_PORT = 2222
+    TARGET_PORT = 2220
     connections = {}
     active_connections = 0
 
     def __init__(self, *args, **kwargs):
         super(Server, self).__init__(*args, **kwargs)
+
         self._stop = threading.Event()
         self.server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.server.bind((self.TARGET_HOST, self.TARGET_PORT))
@@ -40,7 +40,7 @@ class Server(threading.Thread):
         # thread = threading.Thread(target=new_client.hold_connection())
         # thread.start()
         self.connections[addr] = new_client
-        new_client.process_msg(msg)
+        new_client.process_packet(msg)
 
     def remove_connection(self, addr):
         self.active_connections -= 1
@@ -50,7 +50,7 @@ class Server(threading.Thread):
 
     def handle_client(self, msg, addr):
         client = self.connections.get(addr)
-        client.process_msg(msg)
+        client.process_packet(msg)
 
     def run(self):
         while True:

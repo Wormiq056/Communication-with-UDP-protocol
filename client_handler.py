@@ -1,7 +1,7 @@
 import zlib
-from consts import HEADER, PACKET_TYPE_START, PACKET_TYPE_END, ACK, FIN, REQUEST, \
+from consts import HEADER_SIZE, PACKET_TYPE_START, PACKET_TYPE_END, ACK, FIN, REQUEST, \
     MSG_TYPE_START, MSG_TYPE_END, NONE, TXT, FILE, DATA, FRAG_NUM_START, FRAG_NUM_END, NO_FRAGMENT, CHECKSUM_START, \
-    CHECKSUM_END, FAIL
+    CHECKSUM_END, FAIL, FORMAT
 from time import sleep
 
 
@@ -24,7 +24,9 @@ class ClientHandler:
 
     def compare_checksum(self, msg):
         sent_checksum = int(msg[CHECKSUM_START:CHECKSUM_END])
-        if zlib.crc32(bytes(msg)) != sent_checksum:
+        print(sent_checksum)
+        if zlib.crc32(msg[:CHECKSUM_START:CHECKSUM_END].encode(FORMAT)) != sent_checksum:
+            print(zlib.crc32(msg.encode(FORMAT)))
             return False
         return True
 
@@ -35,7 +37,7 @@ class ClientHandler:
         return frag
 
     def create_check_sum(self, msg):
-        checksum = zlib.crc32(bytes(msg))
+        checksum = zlib.crc32(msg.encode(FORMAT))
         return str(checksum)
 
     def check_frag_number(self, msg):
@@ -47,6 +49,7 @@ class ClientHandler:
 
     def process_txt_packet(self, msg):
         if not self.compare_checksum(msg):
+
             response = REQUEST + FAIL + self.create_frag_num()
             checksum = self.create_check_sum(response)
             self.server.send(response + checksum, self.addr)
@@ -58,13 +61,13 @@ class ClientHandler:
             return
         if msg[FRAG_NUM_START:FRAG_NUM_END] != NO_FRAGMENT:
             print(f'{self.addr}] fragment {self.next_fragment} recieved')
-            self.current_txt_msg.append(msg[HEADER:])
+            self.current_txt_msg.append(msg[HEADER_SIZE:])
             self.next_fragment += 1
             response = ACK + NONE + self.create_frag_num()
             checksum = self.create_check_sum(response)
             self.server.send(response + checksum, self.addr)
         else:
-            print(msg[HEADER:])
+            print(msg[HEADER_SIZE:])
             response = ACK + NONE + NO_FRAGMENT
             checksum = self.create_check_sum(response)
             self.server.send(response + checksum, self.addr)
@@ -86,7 +89,7 @@ class ClientHandler:
             print("".join(self.current_txt_msg))
             self.current_txt_msg = []
 
-    def process_msg(self, msg):
+    def process_packet(self, msg):
         self.reset_connection_time()
         if msg[PACKET_TYPE_START:PACKET_TYPE_END] == DATA:
             self.process_data_packet(msg)
