@@ -1,57 +1,70 @@
 import socket
 import threading
 import sys
-import time
-import consts
+from time import sleep
+from consts import FORMAT, PROTOCOL_SIZE
 from client_handler import ClientHandler
 
 
 class Server(threading.Thread):
     TARGET_HOST = "127.0.0.1"
     TARGET_PORT = 2222
+    connections = {}
+    active_connections = 0
 
     def __init__(self, *args, **kwargs):
         super(Server, self).__init__(*args, **kwargs)
         self._stop = threading.Event()
-        self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.server.bind((self.TARGET_HOST, self.TARGET_PORT))
         self.server.settimeout(1)
-        print("Listening on {} : {} (default)".format(self.TARGET_HOST, self.TARGET_PORT))
+        print("[INFO] Listening on {} : {} (default)".format(self.TARGET_HOST, self.TARGET_PORT))
 
     def revive(self):
-        print("Listening on {} : {} (default)".format(self.TARGET_HOST, self.TARGET_PORT))
+        print("[INFO] Listening on {} : {} (default)".format(self.TARGET_HOST, self.TARGET_PORT))
         self._stop.clear()
 
     def pause(self):
-        print("Server has been paused")
+        print("[INFO] Server has been paused")
         self._stop.set()
 
     def stopped(self):
         return self._stop.isSet()
 
-    def handle_client(self, conn, addr):
+    def create_client(self, msg, addr):
         print(f'[NEW CONNECTION] {addr} connected.')
-        # connected = True
-        # conn.settimeout(1)
-        #
-        # while connected:
-        #     header_msg = conn.recv(consts.HEADER).decode(consts.FORMAT)
-        ClientHandler(conn, addr)
+        self.active_connections += 1
+        print(f'[INFO] Active connections {self.active_connections}')
+
+        new_client = ClientHandler(addr, self)
+        # thread = threading.Thread(target=new_client.hold_connection())
+        # thread.start()
+        self.connections[addr] = new_client
+        new_client.process_msg(msg)
+
+    def remove_connection(self, addr):
+        self.active_connections -= 1
+        self.connections[addr] = None
+        print(f'[DISCONNECTED] {addr}.')
+        print(f'[INFO] Active connections {self.active_connections}')
+
+    def handle_client(self, msg, addr):
+        client = self.connections.get(addr)
+        client.process_msg(msg)
 
     def run(self):
-        self.server.listen()
         while True:
             try:
                 if self.stopped():
-                    time.sleep(0.5)
+                    sleep(0.5)
                     continue
-                conn, addr = self.server.accept()
-
-                thread = threading.Thread(target=self.handle_client, args=(conn, addr))
-                thread.start()
+                msg, addr = self.server.recvfrom(PROTOCOL_SIZE)
+                if not self.connections.get(addr):
+                    self.create_client(msg.decode(FORMAT), addr)
+                else:
+                    self.handle_client(msg.decode(FORMAT), addr)
             except TimeoutError:
                 continue
 
-    def close(self):
-        print('test')
-        sys.exit()
+    def send(self, msg, addr):
+        self.server.sendto(msg.encode(FORMAT), addr)
