@@ -13,7 +13,9 @@ class PacketFactory:
         self.file_name = file_name
 
     def create_check_sum(self, msg):
-        checksum = zlib.crc32(msg.encode(FORMAT))
+        checksum = str(zlib.crc32(msg.encode(FORMAT)))
+        while len(checksum) != 10:
+            checksum = "0" + checksum
         return str(checksum)
 
     def create_frag_num(self, num):
@@ -24,14 +26,16 @@ class PacketFactory:
 
     def create_txt_packets(self):
         fragmented_packets = []
-        if len(self.msg) > (self.fragment_size - HEADER_SIZE):
+        if len(self.msg) > (int(self.fragment_size) - HEADER_SIZE):
             fragment_count = 1
             while self.msg:
                 header = DATA + TXT + self.create_frag_num(fragment_count)
-                txt_msg = self.msg[:self.fragment_size]
+                txt_msg = self.msg[:int(self.fragment_size) - HEADER_SIZE]
                 checksum = self.create_check_sum(header + txt_msg)
                 fragmented_packets.append(header + checksum + txt_msg)
-                self.msg = self.msg[:self.fragment_size]
+                fragment_count += 1
+                self.msg = self.msg[int(self.fragment_size) - HEADER_SIZE:]
+
             return fragmented_packets
         else:
             header = DATA + TXT + NO_FRAGMENT

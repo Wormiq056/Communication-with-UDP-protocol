@@ -7,7 +7,7 @@ from client_handler import ClientHandler
 
 class Server(threading.Thread):
     TARGET_HOST = "127.0.0.1"
-    TARGET_PORT = 2220
+    TARGET_PORT = 2222
     connections = {}
     active_connections = 0
 
@@ -37,16 +37,17 @@ class Server(threading.Thread):
         print(f'[INFO] Active connections {self.active_connections}')
 
         new_client = ClientHandler(addr, self)
-        # thread = threading.Thread(target=new_client.hold_connection())
-        # thread.start()
+        thread = threading.Thread(target=new_client.hold_connection)
+        thread.start()
         self.connections[addr] = new_client
         new_client.process_packet(msg)
 
     def remove_connection(self, addr):
-        self.active_connections -= 1
-        self.connections[addr] = None
-        print(f'[DISCONNECTED] {addr}.')
-        print(f'[INFO] Active connections {self.active_connections}')
+        if self.connections[addr]:
+            self.active_connections -= 1
+            self.connections[addr] = None
+            print(f'[DISCONNECTED] {addr}.')
+            print(f'[INFO] Active connections {self.active_connections}')
 
     def handle_client(self, msg, addr):
         client = self.connections.get(addr)

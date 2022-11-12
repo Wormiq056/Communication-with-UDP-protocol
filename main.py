@@ -5,22 +5,32 @@ import os
 from client import Client
 
 def main():
-    server = Server()
-    server.start()
+    try:
+        server = Server()
+        server.start()
+    except Exception:
+        pass
     client = None
     connected = False
 
     while True:
         command = input("")
         if command == 'send':
-            server.pause()
+            try:
+                server.pause()
+            except Exception:
+                pass
             if not client:
+                connected = True
                 client = Client()
                 client.initialize()
             else:
                 client.create_msg()
             time.sleep(3)
-            server.revive()
+            try:
+                server.revive()
+            except:
+                pass
         elif command == 'exit':
             print("Closing program")
             os.kill(os.getpid(), signal.SIGINT)
@@ -29,6 +39,7 @@ def main():
         elif command == "revive" and not connected:
             server.revive()
         elif command == "close" and connected:
+            connected = False
             client.close()
             client = None
 

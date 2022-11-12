@@ -9,12 +9,12 @@ class ClientHandler:
     def __init__(self, addr, server):
         self.addr = addr
         self.server = server
-        self.connection_time = 5
+        self.connection_time = 6
         self.next_fragment = 1
         self.current_txt_msg = []
 
     def reset_connection_time(self):
-        self.connection_time = 5
+        self.connection_time = 6
 
     def hold_connection(self):
         while self.connection_time != 0:
@@ -24,9 +24,8 @@ class ClientHandler:
 
     def compare_checksum(self, msg):
         sent_checksum = int(msg[CHECKSUM_START:CHECKSUM_END])
-        print(sent_checksum)
-        if zlib.crc32(msg[:CHECKSUM_START:CHECKSUM_END].encode(FORMAT)) != sent_checksum:
-            print(zlib.crc32(msg.encode(FORMAT)))
+        server_checksum = msg[:CHECKSUM_START] + msg[CHECKSUM_END:]
+        if zlib.crc32(server_checksum.encode(FORMAT)) != sent_checksum:
             return False
         return True
 
@@ -37,24 +36,27 @@ class ClientHandler:
         return frag
 
     def create_check_sum(self, msg):
-        checksum = zlib.crc32(msg.encode(FORMAT))
+        checksum = str(zlib.crc32(msg.encode(FORMAT)))
+        while len(checksum) != 10:
+            checksum = "0" + checksum
         return str(checksum)
 
     def check_frag_number(self, msg):
         if msg[FRAG_NUM_START:FRAG_NUM_END] == NO_FRAGMENT:
             return True
-        if int(msg[FRAG_NUM_START:FRAG_NUM_END]) != self.current_txt_msg:
+        if int(msg[FRAG_NUM_START:FRAG_NUM_END]) != self.next_fragment:
             return False
         return True
 
     def process_txt_packet(self, msg):
         if not self.compare_checksum(msg):
-
+            print(f'{self.addr} sent incorrect packet, sending error')
             response = REQUEST + FAIL + self.create_frag_num()
             checksum = self.create_check_sum(response)
             self.server.send(response + checksum, self.addr)
             return
         if not self.check_frag_number(msg):
+            print(f'{self.addr} sent incorrect packet, sending error')
             response = REQUEST + FAIL + self.create_frag_num()
             checksum = self.create_check_sum(response)
             self.server.send(response + checksum, self.addr)
@@ -67,7 +69,7 @@ class ClientHandler:
             checksum = self.create_check_sum(response)
             self.server.send(response + checksum, self.addr)
         else:
-            print(msg[HEADER_SIZE:])
+            print(f"Message from {self.addr} client: " + msg[HEADER_SIZE:])
             response = ACK + NONE + NO_FRAGMENT
             checksum = self.create_check_sum(response)
             self.server.send(response + checksum, self.addr)
@@ -86,11 +88,11 @@ class ClientHandler:
                 self.server.send(response + checksum, self.addr)
                 return
             self.next_fragment = 0
-            print("".join(self.current_txt_msg))
+            if msg[FRAG_NUM_START:FRAG_NUM_END] != NO_FRAGMENT:
+                print(f"Message from {self.addr} client: " + "".join(self.current_txt_msg))
             self.current_txt_msg = []
 
     def process_packet(self, msg):
-        self.reset_connection_time()
         if msg[PACKET_TYPE_START:PACKET_TYPE_END] == DATA:
             self.process_data_packet(msg)
         elif msg[PACKET_TYPE_START:PACKET_TYPE_END] == FIN:
@@ -99,7 +101,7 @@ class ClientHandler:
             if msg[MSG_TYPE_START:MSG_TYPE_END] == FAIL:
                 self.server.remove_connection(self.addr)
             elif msg[MSG_TYPE_START:MSG_TYPE_END] == NONE:
-                response = REQUEST + FAIL + NO_FRAGMENT
+                response = ACK + NONE + NO_FRAGMENT
                 checksum = self.create_check_sum(response)
                 self.server.send(response + checksum, self.addr)
         elif msg[PACKET_TYPE_START:PACKET_TYPE_END] == ACK:
