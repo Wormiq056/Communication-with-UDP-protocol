@@ -1,7 +1,7 @@
-from server import Server
-from client import Client
-import util
-from consts import TARGET_HOST, TARGET_PORT
+from reciever.server import Server
+from sender.client import Client
+from helpers import util
+from helpers.consts import TARGET_HOST, TARGET_PORT
 
 
 class ProgramInterface:

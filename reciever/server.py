@@ -2,8 +2,8 @@ import socket
 import threading
 from time import sleep
 
-from client_handler import ClientHandler
-from consts import PROTOCOL_SIZE
+from reciever.client_handler import ClientHandler
+from helpers.consts import PROTOCOL_SIZE
 
 
 class Server(threading.Thread):

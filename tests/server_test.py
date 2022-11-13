@@ -1,8 +1,5 @@
-import socket
-import consts
+from helpers import consts
 import zlib
-import codecs
-import consts
 
 s = b'1110000001test.txt'
 t = zlib.crc32(s)

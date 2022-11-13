@@ -1,7 +1,7 @@
 import ipaddress
 import os
 
-from consts import PROTOCOL_SIZE, LOWEST_FRAGMENT_SIZE
+from helpers.consts import PROTOCOL_SIZE, LOWEST_FRAGMENT_SIZE
 
 
 def validate_ip_address(ip_string):

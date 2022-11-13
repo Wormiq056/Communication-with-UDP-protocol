@@ -1,6 +1,6 @@
 import zlib
 
-from consts import HEADER_SIZE, TXT, FILE, DATA, NO_FRAGMENT, FORMAT, FRAG_NUM_LENGTH, CHECKSUM_LENGTH
+from helpers.consts import HEADER_SIZE, TXT, FILE, DATA, NO_FRAGMENT, FORMAT, FRAG_NUM_LENGTH, CHECKSUM_LENGTH
 
 
 class PacketFactory:

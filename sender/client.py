@@ -2,12 +2,12 @@ import socket
 import zlib
 from threading import Thread
 from time import sleep
-import util
+from helpers import util
 import os
 
-from consts import PACKET_TYPE_START, PACKET_TYPE_END, ACK, FIN, REQUEST, MSG_TYPE_START, MSG_TYPE_END, NONE, \
+from helpers.consts import PACKET_TYPE_START, PACKET_TYPE_END, ACK, FIN, REQUEST, MSG_TYPE_START, MSG_TYPE_END, NONE, \
     NO_FRAGMENT, FAIL, PROTOCOL_SIZE, CHECKSUM_LENGTH, FRAG_NUM_LENGTH, LOWEST_FRAGMENT_SIZE
-from packet_factory import PacketFactory
+from sender.packet_factory import PacketFactory
 
 
 class Client:

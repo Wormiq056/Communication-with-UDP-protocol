@@ -1,7 +1,7 @@
 import zlib
 from time import sleep
 
-from consts import HEADER_SIZE, PACKET_TYPE_START, PACKET_TYPE_END, ACK, FIN, REQUEST, \
+from helpers.consts import HEADER_SIZE, PACKET_TYPE_START, PACKET_TYPE_END, ACK, FIN, REQUEST, \
     MSG_TYPE_START, MSG_TYPE_END, NONE, TXT, FILE, DATA, FRAG_NUM_START, FRAG_NUM_END, NO_FRAGMENT, CHECKSUM_START, \
     CHECKSUM_END, FAIL, FORMAT, FIRST_FILE_PACKET, DOWNLOAD_PATH
 
@@ -143,7 +143,7 @@ class ClientHandler:
         self.transmission_statistics()
 
     def transmission_statistics(self):
-        print(f"[STATISTIC] Number of correctly received packets {self.next_fragment - 1}")
+        print(f"[STATISTIC] Number of correctly received packets {self.next_fragment}")
         print(f"[STATISTIC] Number of incorrect packets received {self.num_of_incorrect_packets}")
         self.next_fragment = 1
 
