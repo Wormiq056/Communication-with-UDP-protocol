@@ -34,10 +34,18 @@ class ProgramInterface:
                 if not self.client:
                     self.connected = True
                     self.client = Client(self)
-                    self.client.initialize()
+                    try:
+                        self.client.initialize()
+                    except KeyboardInterrupt:
+                        print('[INFO] Connection is closed')
+                        print('[INFO] Message sending interrupted')
+                        self.client.close()
+                        self.connection_error()
                 else:
                     try:
                         self.client.create_msg()
+                    except KeyboardInterrupt:
+                        print('[INFO] Message sending interrupted')
                     except Exception:
                         print('[ERROR] Looks like server has been turned off')
                         self.client.close()

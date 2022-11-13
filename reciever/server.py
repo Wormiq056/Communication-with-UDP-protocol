@@ -23,15 +23,15 @@ class Server(threading.Thread):
         self.target_host = host
         self.target_port = port
         self.server.bind((self.target_host, self.target_port))
-        print("[INFO] Listening on {} : {}".format(self.target_host, self.target_port))
+        print("[SERVER] Listening on {} : {}".format(self.target_host, self.target_port))
 
     def revive(self):
-        print("[INFO] Listening on {} : {}".format(self.target_host, self.target_port))
-        print(f'[INFO] Active connections {self.active_connections}')
+        print("[SERVER] Listening on {} : {}".format(self.target_host, self.target_port))
+        print(f'[SERVER] Active connections {self.active_connections}')
         self._stop.clear()
 
     def pause(self):
-        print("[INFO] Server has been paused")
+        print("[SERVER] Server has been paused")
         self._stop.set()
 
     def stopped(self):
@@ -40,7 +40,7 @@ class Server(threading.Thread):
     def create_client(self, msg, addr):
         print(f'[NEW CONNECTION] {addr} connected.')
         self.active_connections += 1
-        print(f'[INFO] Active connections {self.active_connections}')
+        print(f'[SERVER] Active connections {self.active_connections}')
         new_client = ClientHandler(addr, self)
         thread = threading.Thread(target=new_client.hold_connection)
         thread.start()
@@ -52,7 +52,7 @@ class Server(threading.Thread):
             self.active_connections -= 1
             self.connections[addr] = None
             print(f'[DISCONNECTED] {addr}.')
-            print(f'[INFO] Active connections {self.active_connections}')
+            print(f'[SERVER] Active connections {self.active_connections}')
 
     def handle_client(self, msg, addr):
         client = self.connections.get(addr)
