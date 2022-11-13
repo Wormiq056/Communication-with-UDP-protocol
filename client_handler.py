@@ -1,8 +1,9 @@
 import zlib
+from time import sleep
+
 from consts import HEADER_SIZE, PACKET_TYPE_START, PACKET_TYPE_END, ACK, FIN, REQUEST, \
     MSG_TYPE_START, MSG_TYPE_END, NONE, TXT, FILE, DATA, FRAG_NUM_START, FRAG_NUM_END, NO_FRAGMENT, CHECKSUM_START, \
     CHECKSUM_END, FAIL, FORMAT, FIRST_FILE_PACKET, DOWNLOAD_PATH
-from time import sleep
 
 
 class ClientHandler:

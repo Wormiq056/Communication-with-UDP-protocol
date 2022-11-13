@@ -1,31 +1,35 @@
 HEADER_SIZE = 14
-PROTOCOL_SIZE = 1400
+PROTOCOL_SIZE = 1458
 FORMAT = 'utf-8'
-DOWNLOAD_PATH = "./Downloads/"
+DOWNLOAD_PATH = './Downloads/'
+LOWEST_FRAGMENT_SIZE = 20
+TARGET_HOST = "127.0.0.1"
+TARGET_PORT = 2222
 
 # ------- Packet Type -------
 PACKET_TYPE_START = 0
 PACKET_TYPE_END = 2
-ACK = b"00"
-FIN = b"01"
-REQUEST = b"10"
-DATA = b"11"
+ACK = b'00'
+FIN = b'01'
+REQUEST = b'10'
+DATA = b'11'
 
 # ------- Msg type -------
 MSG_TYPE_START = 2
 MSG_TYPE_END = 4
-NONE = b"00"
-TXT = b"01"
-FILE = b"10"
-FAIL = b"11"
+NONE = b'00'
+TXT = b'01'
+FILE = b'10'
+FAIL = b'11'
 
 # ------ Frag num ------
 FRAG_NUM_START = 4
 FRAG_NUM_END = 10
 NO_FRAGMENT = b'\x00\x00\x00\x00\x00\x00'
 FIRST_FILE_PACKET = b'\x00\x00\x00\x00\x00\x01'
+FRAG_NUM_LENGTH = 6
 
 # ------ Check sum --------
 CHECKSUM_START = 10
 CHECKSUM_END = 14
-
+CHECKSUM_LENGTH = 4

@@ -1,27 +1,33 @@
 import socket
 import threading
 from time import sleep
-from consts import FORMAT, PROTOCOL_SIZE
+
 from client_handler import ClientHandler
+from consts import PROTOCOL_SIZE
 
 
 class Server(threading.Thread):
-    TARGET_HOST = "127.0.0.1"
-    TARGET_PORT = 2222
+    target_host: str
+    target_port: int
     connections = {}
     active_connections = 0
+    running = True
 
     def __init__(self, *args, **kwargs):
         super(Server, self).__init__(*args, **kwargs)
-
         self._stop = threading.Event()
         self.server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.server.bind((self.TARGET_HOST, self.TARGET_PORT))
         self.server.settimeout(1)
-        print("[INFO] Listening on {} : {} (default)".format(self.TARGET_HOST, self.TARGET_PORT))
+
+    def bind(self, host, port):
+        self.target_host = host
+        self.target_port = port
+        self.server.bind((self.target_host, self.target_port))
+        print("[INFO] Listening on {} : {}".format(self.target_host, self.target_port))
 
     def revive(self):
-        print("[INFO] Listening on {} : {} (default)".format(self.TARGET_HOST, self.TARGET_PORT))
+        print("[INFO] Listening on {} : {}".format(self.target_host, self.target_port))
+        print(f'[INFO] Active connections {self.active_connections}')
         self._stop.clear()
 
     def pause(self):
@@ -35,7 +41,6 @@ class Server(threading.Thread):
         print(f'[NEW CONNECTION] {addr} connected.')
         self.active_connections += 1
         print(f'[INFO] Active connections {self.active_connections}')
-
         new_client = ClientHandler(addr, self)
         thread = threading.Thread(target=new_client.hold_connection)
         thread.start()
@@ -54,7 +59,7 @@ class Server(threading.Thread):
         client.process_packet(msg)
 
     def run(self):
-        while True:
+        while self.running:
             try:
                 if self.stopped():
                     sleep(0.5)
@@ -69,3 +74,6 @@ class Server(threading.Thread):
 
     def send(self, msg, addr):
         self.server.sendto(msg, addr)
+
+    def close(self):
+        self.running = False

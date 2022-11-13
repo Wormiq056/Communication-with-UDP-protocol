@@ -1,9 +1,6 @@
 import zlib
-import socket
-from consts import HEADER_SIZE, PACKET_TYPE_START, PACKET_TYPE_END, ACK, FIN, REQUEST, DATA, \
-    MSG_TYPE_START, MSG_TYPE_END, NONE, TXT, FILE, DATA, FRAG_NUM_START, FRAG_NUM_END, NO_FRAGMENT, CHECKSUM_START, \
-    CHECKSUM_END, FAIL, PROTOCOL_SIZE, FORMAT
-import os
+
+from consts import HEADER_SIZE, TXT, FILE, DATA, NO_FRAGMENT, FORMAT, FRAG_NUM_LENGTH, CHECKSUM_LENGTH
 
 
 class PacketFactory:
@@ -13,20 +10,13 @@ class PacketFactory:
         self.msg = msg
         self.file_name = file_name
 
-
-    def create_frag_num(self,num):
-        frag = num.to_bytes(6, 'big')
-        # while len(frag) != 6:
-        #     frag = "0" + frag
+    def create_frag_num(self, num):
+        frag = num.to_bytes(FRAG_NUM_LENGTH, 'big')
         return frag
 
     def create_check_sum(self, msg):
-        checksum = zlib.crc32(msg).to_bytes(4,'big')
-        # while len(checksum) != 10:
-        #     checksum = "0" + checksum
+        checksum = zlib.crc32(msg).to_bytes(CHECKSUM_LENGTH, 'big')
         return checksum
-
-
 
     def create_txt_packets(self):
         fragmented_packets = []
@@ -48,7 +38,6 @@ class PacketFactory:
             return header + checksum + txt_msg
 
     def create_file_packets(self):
-        file_size = os.stat(self.file_name).st_size
         first_header = DATA + FILE + self.create_frag_num(1)
         packet_msg = self.file_name.encode(FORMAT)
         checksum = self.create_check_sum(first_header + packet_msg)

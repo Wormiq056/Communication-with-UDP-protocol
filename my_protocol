@@ -11,7 +11,7 @@ frag num (5 bytes) = num of current fragment that is beeing sent
 checksum (10 bytes) = length of data part
 data (0-1000 bytes )= actuall data we want to sent
 
-HEADER-SIZE = 19 B
+HEADER-SIZE = 14 B
 
 
 ----packet type----
