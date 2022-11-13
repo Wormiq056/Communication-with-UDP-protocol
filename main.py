@@ -36,8 +36,12 @@ class ProgramInterface:
                     self.client = Client(self)
                     self.client.initialize()
                 else:
-                    self.client.create_msg()
-
+                    try:
+                        self.client.create_msg()
+                    except Exception:
+                        print('[ERROR] Looks like server has been turned off')
+                        self.client.close()
+                        self.connection_error()
                 self.server.revive()
             elif command == 'exit':
                 print("[INFO] Closing program")

@@ -6,7 +6,7 @@ from helpers import util
 import os
 
 from helpers.consts import PACKET_TYPE_START, PACKET_TYPE_END, ACK, FIN, REQUEST, MSG_TYPE_START, MSG_TYPE_END, NONE, \
-    NO_FRAGMENT, FAIL, PROTOCOL_SIZE, CHECKSUM_LENGTH, FRAG_NUM_LENGTH, LOWEST_FRAGMENT_SIZE
+    NO_FRAGMENT, FAIL, PROTOCOL_SIZE, CHECKSUM_LENGTH, FRAG_NUM_LENGTH, LOWEST_FRAGMENT_SIZE, TXT, FILE
 from sender.packet_factory import PacketFactory
 
 
@@ -107,6 +107,7 @@ class Client:
                 self.no_frag_transfer(packet)
         except TimeoutError:
             self.no_frag_transfer(packet)
+        print('[INFO] Message was sent successfully')
 
     def create_frag_num(self, num):
         frag = num.to_bytes(FRAG_NUM_LENGTH, 'big')
@@ -128,6 +129,10 @@ class Client:
         respone = FIN + msg_type + self.create_frag_num(len(packets) + 1)
         checksum = self.create_check_sum(respone)
         self.send(respone + checksum)
+        if msg_type == TXT:
+            print('[INFO] Message was sent successfully')
+        else:
+            print('[INFO] File was sent successfully')
 
     def start_transfer(self, packets):
         if isinstance(packets, bytes):
