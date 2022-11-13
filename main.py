@@ -28,7 +28,7 @@ class ProgramInterface:
 
     def command_loop(self):
         while True:
-            command = input("")
+            command = input("[COMMAND]:")
             if command == 'send':
                 self.server.pause()
                 if not self.client:

@@ -15,6 +15,7 @@ class ClientHandler:
         self.current_txt_msg = []
         self.transfered_file_name = ""
         self.transfer_file_pointer = None
+        self.num_of_incorrect_packets = 0
 
     def reset_connection_time(self):
         self.connection_time = 6
@@ -49,45 +50,49 @@ class ClientHandler:
 
     def process_txt_packet(self, msg):
         if not self.compare_checksum(msg):
-            print(f'{self.addr} sent incorrect packet, sending error')
+            print(f'[CLIENT] {self.addr} sent corrupted packet, sending error')
+            self.num_of_incorrect_packets += 1
             response = REQUEST + FAIL + self.create_frag_num()
             checksum = self.create_check_sum(response)
             self.server.send(response + checksum, self.addr)
             return
         if not self.check_frag_number(msg):
-            print(f'{self.addr} sent incorrect packet, sending error')
+            print(f'[CLIENT] {self.addr} sent incorrect fragment, sending error')
+            self.num_of_incorrect_packets += 1
             response = REQUEST + FAIL + self.create_frag_num()
             checksum = self.create_check_sum(response)
             self.server.send(response + checksum, self.addr)
             return
         if msg[FRAG_NUM_START:FRAG_NUM_END] != NO_FRAGMENT:
-            print(f'{self.addr}] fragment {self.next_fragment} recieved')
+            print(f'[CLIENT] {self.addr}] fragment {self.next_fragment} recieved')
             self.current_txt_msg.append(msg[HEADER_SIZE:].decode(FORMAT))
             self.next_fragment += 1
             response = ACK + NONE + self.create_frag_num()
             checksum = self.create_check_sum(response)
             self.server.send(response + checksum, self.addr)
         else:
-            print(f"Message from {self.addr} client: " + msg[HEADER_SIZE:].decode(FORMAT))
+            print(f"[CLIENT] Message from {self.addr} client: " + msg[HEADER_SIZE:].decode(FORMAT))
             response = ACK + NONE + NO_FRAGMENT
             checksum = self.create_check_sum(response)
             self.server.send(response + checksum, self.addr)
 
     def process_file_packet(self, msg):
         if not self.compare_checksum(msg):
-            print(f'{self.addr} sent incorrect packet, sending error')
+            self.num_of_incorrect_packets += 1
+            print(f'[CLIENT] {self.addr} sent corrupted packet, sending error')
             response = REQUEST + FAIL + self.create_frag_num()
             checksum = self.create_check_sum(response)
             self.server.send(response + checksum, self.addr)
             return
         if not self.check_frag_number(msg):
-            print(f'{self.addr} sent incorrect packet, sending error')
+            self.num_of_incorrect_packets += 1
+            print(f'[CLIENT] {self.addr} sent incorrect fragment, sending error')
             response = REQUEST + FAIL + self.create_frag_num()
             checksum = self.create_check_sum(response)
             self.server.send(response + checksum, self.addr)
             return
         if msg[FRAG_NUM_START:FRAG_NUM_END] == FIRST_FILE_PACKET:
-            print(f'{self.addr}] fragment {self.next_fragment} recieved')
+            print(f'[CLIENT] {self.addr}] fragment {self.next_fragment} recieved')
             self.transfered_file_name = DOWNLOAD_PATH + msg[HEADER_SIZE:].decode(FORMAT)
             self.next_fragment += 1
             self.transfer_file_pointer = open(self.transfered_file_name, 'wb')
@@ -95,7 +100,7 @@ class ClientHandler:
             checksum = self.create_check_sum(response)
             self.server.send(response + checksum, self.addr)
         else:
-            print(f'{self.addr}] fragment {self.next_fragment} recieved')
+            print(f'[CLIENT] {self.addr}] fragment {self.next_fragment} recieved')
             self.next_fragment += 1
             file_data = msg[HEADER_SIZE:]
             self.transfer_file_pointer.write(file_data)
@@ -120,9 +125,8 @@ class ClientHandler:
             response = ACK + NONE + self.create_frag_num()
             checksum = self.create_check_sum(response)
             self.server.send(response + checksum, self.addr)
-            self.next_fragment = 1
             if msg[FRAG_NUM_START:FRAG_NUM_END] != NO_FRAGMENT:
-                print(f"Message from {self.addr} client: " + "".join(self.current_txt_msg))
+                print(f"[CLIENT] Message from {self.addr} client: " + "".join(self.current_txt_msg))
             self.current_txt_msg = []
         elif msg[MSG_TYPE_START:MSG_TYPE_END] == FILE:
             if not self.check_frag_number(msg):
@@ -133,10 +137,15 @@ class ClientHandler:
             response = ACK + NONE + self.create_frag_num()
             checksum = self.create_check_sum(response)
             self.server.send(response + checksum, self.addr)
-            self.next_fragment = 1
-            print(f"File was successfully downloaded and saved to : {self.transfered_file_name}")
+            print(f"[CLIENT] File was successfully downloaded and saved to : {self.transfered_file_name}")
             self.transfer_file_pointer.close()
             self.transfered_file_name = None
+        self.transmission_statistics()
+
+    def transmission_statistics(self):
+        print(f"[STATISTIC] Number of correctly received packets {self.next_fragment - 1}")
+        print(f"[STATISTIC] Number of incorrect packets received {self.num_of_incorrect_packets}")
+        self.next_fragment = 1
 
     def process_packet(self, msg):
         if msg[PACKET_TYPE_START:PACKET_TYPE_END] == DATA:
