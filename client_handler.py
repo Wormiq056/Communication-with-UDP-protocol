@@ -1,7 +1,7 @@
 import zlib
 from consts import HEADER_SIZE, PACKET_TYPE_START, PACKET_TYPE_END, ACK, FIN, REQUEST, \
     MSG_TYPE_START, MSG_TYPE_END, NONE, TXT, FILE, DATA, FRAG_NUM_START, FRAG_NUM_END, NO_FRAGMENT, CHECKSUM_START, \
-    CHECKSUM_END, FAIL, FORMAT
+    CHECKSUM_END, FAIL, FORMAT, FIRST_FILE_PACKET, DOWNLOAD_PATH
 from time import sleep
 
 
@@ -12,6 +12,8 @@ class ClientHandler:
         self.connection_time = 6
         self.next_fragment = 1
         self.current_txt_msg = []
+        self.transfered_file_name = ""
+        self.transfer_file_pointer = None
 
     def reset_connection_time(self):
         self.connection_time = 6
@@ -31,7 +33,7 @@ class ClientHandler:
 
     def create_frag_num(self):
         frag = str(self.next_fragment)
-        while len(frag) != 5:
+        while len(frag) != 6:
             frag = "0" + frag
         return frag
 
@@ -74,25 +76,73 @@ class ClientHandler:
             checksum = self.create_check_sum(response)
             self.server.send(response + checksum, self.addr)
 
+    def process_file_packet(self, msg):
+        if not self.compare_checksum(msg):
+            print(f'{self.addr} sent incorrect packet, sending error')
+            response = REQUEST + FAIL + self.create_frag_num()
+            checksum = self.create_check_sum(response)
+            self.server.send(response + checksum, self.addr)
+            return
+        if not self.check_frag_number(msg):
+            print(f'{self.addr} sent incorrect packet, sending error')
+            response = REQUEST + FAIL + self.create_frag_num()
+            checksum = self.create_check_sum(response)
+            self.server.send(response + checksum, self.addr)
+            return
+        if msg[FRAG_NUM_START:FRAG_NUM_END] == FIRST_FILE_PACKET:
+            print(f'{self.addr}] fragment {self.next_fragment} recieved')
+            self.transfered_file_name = DOWNLOAD_PATH + msg[HEADER_SIZE:]
+            self.next_fragment += 1
+            self.transfer_file_pointer = open(self.transfered_file_name, 'wb')
+            response = ACK + NONE + self.create_frag_num()
+            checksum = self.create_check_sum(response)
+            self.server.send(response + checksum, self.addr)
+        else:
+            print(f'{self.addr}] fragment {self.next_fragment} recieved')
+            self.next_fragment += 1
+            file_data = msg[HEADER_SIZE:].encode(FORMAT)
+            self.transfer_file_pointer.write(file_data)
+            response = ACK + NONE + self.create_frag_num()
+            checksum = self.create_check_sum(response)
+            self.server.send(response + checksum, self.addr)
+
     def process_data_packet(self, msg):
         if msg[MSG_TYPE_START:MSG_TYPE_END] == TXT:
             self.process_txt_packet(msg)
         elif msg[MSG_TYPE_START:MSG_TYPE_END] == FILE:
-            pass
+            self.process_file_packet(msg)
 
     def process_fin(self, msg):
+
         if msg[MSG_TYPE_START:MSG_TYPE_END] == TXT:
             if not self.check_frag_number(msg):
                 response = REQUEST + FAIL + self.create_frag_num()
                 checksum = self.create_check_sum(response)
                 self.server.send(response + checksum, self.addr)
                 return
-            self.next_fragment = 0
+            response = ACK + NONE + self.create_frag_num()
+            checksum = self.create_check_sum(response)
+            self.server.send(response + checksum, self.addr)
+            self.next_fragment = 1
             if msg[FRAG_NUM_START:FRAG_NUM_END] != NO_FRAGMENT:
                 print(f"Message from {self.addr} client: " + "".join(self.current_txt_msg))
             self.current_txt_msg = []
+        elif msg[MSG_TYPE_START:MSG_TYPE_END] == FILE:
+            if not self.check_frag_number(msg):
+                response = REQUEST + FAIL + self.create_frag_num()
+                checksum = self.create_check_sum(response)
+                self.server.send(response + checksum, self.addr)
+                return
+            response = ACK + NONE + self.create_frag_num()
+            checksum = self.create_check_sum(response)
+            self.server.send(response + checksum, self.addr)
+            self.next_fragment = 1
+            print(f"File was successfully downloaded and saved to : {self.transfered_file_name}")
+            self.transfer_file_pointer.close()
+            self.transfered_file_name = None
 
     def process_packet(self, msg):
+
         if msg[PACKET_TYPE_START:PACKET_TYPE_END] == DATA:
             self.process_data_packet(msg)
         elif msg[PACKET_TYPE_START:PACKET_TYPE_END] == FIN:

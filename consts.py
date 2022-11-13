@@ -1,7 +1,7 @@
-HEADER_SIZE = 19
+HEADER_SIZE = 20
 PROTOCOL_SIZE = 1400
 FORMAT = 'utf-8'
-
+DOWNLOAD_PATH = "./Downloads/"
 
 # ------- Packet Type -------
 PACKET_TYPE_START = 0
@@ -21,10 +21,11 @@ FAIL = "11"
 
 # ------ Frag num ------
 FRAG_NUM_START = 4
-FRAG_NUM_END = 9
-NO_FRAGMENT = "00000"
+FRAG_NUM_END = 10
+NO_FRAGMENT = "000000"
+FIRST_FILE_PACKET = "000001"
 
 # ------ Check sum --------
-CHECKSUM_START = 9
-CHECKSUM_END = 19
+CHECKSUM_START = 10
+CHECKSUM_END = 20
 

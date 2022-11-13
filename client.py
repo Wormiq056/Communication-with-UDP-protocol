@@ -13,7 +13,7 @@ class Client:
         self.target_host = "127.0.0.1"
         self.target_port = 2222
         self.client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.client.settimeout(1)
+        self.client.settimeout(2)
         self.keep_connection_thread = True
 
     def keep_connection(self):
@@ -29,11 +29,14 @@ class Client:
             self.target_host = host
         port = (input("Choose target port(default 2222): "))
         if port != "":
-            self.target_port = port
+            self.target_port = int(port)
 
     def create_check_sum(self, msg):
-        checksum = zlib.crc32(msg.encode(FORMAT))
+        checksum = str(zlib.crc32(msg.encode(FORMAT)))
+        while len(checksum) != 10:
+            checksum = "0" + checksum
         return str(checksum)
+
 
     def initialize(self):
         remaining_tries = 3
@@ -47,16 +50,15 @@ class Client:
                 msg = msg.decode(FORMAT)
                 if msg[PACKET_TYPE_START:PACKET_TYPE_END] != ACK:
                     print(msg[PACKET_TYPE_START:PACKET_TYPE_END])
-                    remaining_tries -= 1
-                    if remaining_tries < 0:
+                    if remaining_tries <= 0:
                         print(f'{self.target_host} is unreachable')
                         return
-
+                    remaining_tries -= 1
                     print(f'Connection to {self.target_host} failed, remaining tries {remaining_tries}')
                     continue
                 break
-            except TimeoutError:
-                if remaining_tries < 0:
+            except Exception:
+                if remaining_tries <= 0:
                     print(f'{self.target_host} is unreachable')
                     return
                 remaining_tries -= 1
@@ -96,23 +98,24 @@ class Client:
 
     def create_frag_num(self, num):
         frag = str(num)
-        while len(frag) != 5:
+        while len(frag) != 6:
             frag = "0" + frag
         return frag
 
     def frag_transfer(self, packets):
         index = 0
-        while len(packets) != 0:
+        msg_type = packets[0][MSG_TYPE_START:MSG_TYPE_END]
+        while index != len(packets):
             try:
                 self.send(packets[index])
                 msg, addr = self.client.recvfrom(PROTOCOL_SIZE)
-                if msg[PACKET_TYPE_START:PACKET_TYPE_END] != "ACK":
-
+                msg = msg.decode(FORMAT)
+                if msg[PACKET_TYPE_START:PACKET_TYPE_END] != ACK:
                     continue
                 index += 1
-            except TimeoutError:
+            except Exception:
                 continue
-        respone = FIN + TXT + self.create_frag_num(len(packets) + 1)
+        respone = FIN + msg_type + self.create_frag_num(len(packets) + 1)
         checksum = self.create_check_sum(respone)
         self.send(respone + checksum)
 
@@ -135,4 +138,5 @@ class Client:
             self.start_transfer(packets)
         elif msg_type == "f":
             file_name = input("File path: ")
-        pass
+            packets = PacketFactory(msg_type, fragment_size,file_name=file_name).create_file_packets()
+            self.start_transfer(packets)
