@@ -13,48 +13,51 @@ class PacketFactory:
         self.msg = msg
         self.file_name = file_name
 
-    def create_check_sum(self, msg):
-        checksum = str(zlib.crc32(msg.encode(FORMAT)))
-        while len(checksum) != 10:
-            checksum = "0" + checksum
-        return str(checksum)
 
-    def create_frag_num(self, num):
-        frag_num = str(num)
-        while len(frag_num) != 6:
-            frag_num = "0" + frag_num
-        return frag_num
+    def create_frag_num(self,num):
+        frag = num.to_bytes(6, 'big')
+        # while len(frag) != 6:
+        #     frag = "0" + frag
+        return frag
+
+    def create_check_sum(self, msg):
+        checksum = zlib.crc32(msg).to_bytes(4,'big')
+        # while len(checksum) != 10:
+        #     checksum = "0" + checksum
+        return checksum
+
+
 
     def create_txt_packets(self):
         fragmented_packets = []
-        if len(self.msg) > (int(self.fragment_size) - HEADER_SIZE):
+        if len(self.msg) > (int(self.fragment_size) - int(HEADER_SIZE)):
             fragment_count = 1
             while self.msg:
                 header = DATA + TXT + self.create_frag_num(fragment_count)
-                txt_msg = self.msg[:int(self.fragment_size) - HEADER_SIZE]
+                txt_msg = self.msg[:int(self.fragment_size) - int(HEADER_SIZE)].encode(FORMAT)
                 checksum = self.create_check_sum(header + txt_msg)
                 fragmented_packets.append(header + checksum + txt_msg)
                 fragment_count += 1
-                self.msg = self.msg[int(self.fragment_size) - HEADER_SIZE:]
+                self.msg = self.msg[int(self.fragment_size) - int(HEADER_SIZE):]
 
             return fragmented_packets
         else:
             header = DATA + TXT + NO_FRAGMENT
-            txt_msg = self.msg
+            txt_msg = self.msg.encode(FORMAT)
             checksum = self.create_check_sum(header + txt_msg)
             return header + checksum + txt_msg
 
     def create_file_packets(self):
         file_size = os.stat(self.file_name).st_size
         first_header = DATA + FILE + self.create_frag_num(1)
-        packet_msg = self.file_name
+        packet_msg = self.file_name.encode(FORMAT)
         checksum = self.create_check_sum(first_header + packet_msg)
         fragmented_packets = [first_header + checksum + packet_msg]
-        buffer = (file_size - HEADER_SIZE)
+        buffer = (self.fragment_size - HEADER_SIZE)
         fragment_count = 2
         with open(self.file_name, 'rb') as file:
             while True:
-                data = file.read(buffer).decode(FORMAT)
+                data = file.read(buffer)
                 if not data:
                     break
                 packet_header = DATA + FILE + self.create_frag_num(fragment_count)

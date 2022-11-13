@@ -32,10 +32,11 @@ class Client:
             self.target_port = int(port)
 
     def create_check_sum(self, msg):
-        checksum = str(zlib.crc32(msg.encode(FORMAT)))
-        while len(checksum) != 10:
-            checksum = "0" + checksum
-        return str(checksum)
+        checksum = zlib.crc32(msg).to_bytes(4,'big')
+        # while len(checksum) != 10:
+        #     checksum = "0" + checksum
+        return checksum
+
 
 
     def initialize(self):
@@ -47,7 +48,6 @@ class Client:
                 checksum = self.create_check_sum(msg)
                 self.send(msg + checksum)
                 msg , addr = self.client.recvfrom(PROTOCOL_SIZE)
-                msg = msg.decode(FORMAT)
                 if msg[PACKET_TYPE_START:PACKET_TYPE_END] != ACK:
                     print(msg[PACKET_TYPE_START:PACKET_TYPE_END])
                     if remaining_tries <= 0:
@@ -70,7 +70,7 @@ class Client:
         self.create_msg()
 
     def send(self, msg):
-        self.client.sendto(msg.encode(FORMAT), (self.target_host, self.target_port))
+        self.client.sendto(msg, (self.target_host, self.target_port))
         pass
 
     def close(self):
@@ -85,7 +85,6 @@ class Client:
         try:
             self.send(packet)
             msg, addr = self.client.recvfrom(PROTOCOL_SIZE)
-            msg = msg.decode(FORMAT)
 
             if msg[PACKET_TYPE_START:PACKET_TYPE_END] == ACK:
                 respone = FIN + NONE + NO_FRAGMENT
@@ -96,10 +95,10 @@ class Client:
         except TimeoutError:
             self.no_frag_transfer(packet)
 
-    def create_frag_num(self, num):
-        frag = str(num)
-        while len(frag) != 6:
-            frag = "0" + frag
+    def create_frag_num(self,num):
+        frag = num.to_bytes(6, 'big')
+        # while len(frag) != 6:
+        #     frag = "0" + frag
         return frag
 
     def frag_transfer(self, packets):
@@ -109,7 +108,7 @@ class Client:
             try:
                 self.send(packets[index])
                 msg, addr = self.client.recvfrom(PROTOCOL_SIZE)
-                msg = msg.decode(FORMAT)
+                msg = msg
                 if msg[PACKET_TYPE_START:PACKET_TYPE_END] != ACK:
                     continue
                 index += 1
@@ -122,7 +121,7 @@ class Client:
         pass
 
     def start_transfer(self, packets):
-        if isinstance(packets, str):
+        if isinstance(packets, bytes):
             self.no_frag_transfer(packets)
         elif isinstance(packets, list):
             self.frag_transfer(packets)
@@ -134,9 +133,9 @@ class Client:
             fragment_size = PROTOCOL_SIZE
         if msg_type == 't':
             msg = input("Message: ")
-            packets = PacketFactory(msg_type, fragment_size, msg=msg).create_txt_packets()
+            packets = PacketFactory(msg_type, int(fragment_size), msg=msg).create_txt_packets()
             self.start_transfer(packets)
         elif msg_type == "f":
             file_name = input("File path: ")
-            packets = PacketFactory(msg_type, fragment_size,file_name=file_name).create_file_packets()
+            packets = PacketFactory(msg_type, int(fragment_size),file_name=file_name).create_file_packets()
             self.start_transfer(packets)

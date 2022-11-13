@@ -1,4 +1,4 @@
-HEADER_SIZE = 20
+HEADER_SIZE = 14
 PROTOCOL_SIZE = 1400
 FORMAT = 'utf-8'
 DOWNLOAD_PATH = "./Downloads/"
@@ -6,26 +6,26 @@ DOWNLOAD_PATH = "./Downloads/"
 # ------- Packet Type -------
 PACKET_TYPE_START = 0
 PACKET_TYPE_END = 2
-ACK = "00"
-FIN = "01"
-REQUEST = "10"
-DATA = "11"
+ACK = b"00"
+FIN = b"01"
+REQUEST = b"10"
+DATA = b"11"
 
 # ------- Msg type -------
 MSG_TYPE_START = 2
 MSG_TYPE_END = 4
-NONE = "00"
-TXT = "01"
-FILE = "10"
-FAIL = "11"
+NONE = b"00"
+TXT = b"01"
+FILE = b"10"
+FAIL = b"11"
 
 # ------ Frag num ------
 FRAG_NUM_START = 4
 FRAG_NUM_END = 10
-NO_FRAGMENT = "000000"
-FIRST_FILE_PACKET = "000001"
+NO_FRAGMENT = b'\x00\x00\x00\x00\x00\x00'
+FIRST_FILE_PACKET = b'\x00\x00\x00\x00\x00\x01'
 
 # ------ Check sum --------
 CHECKSUM_START = 10
-CHECKSUM_END = 20
+CHECKSUM_END = 14
 

@@ -61,11 +61,11 @@ class Server(threading.Thread):
                     continue
                 msg, addr = self.server.recvfrom(PROTOCOL_SIZE)
                 if not self.connections.get(addr):
-                    self.create_client(msg.decode(FORMAT), addr)
+                    self.create_client(msg, addr)
                 else:
-                    self.handle_client(msg.decode(FORMAT), addr)
+                    self.handle_client(msg, addr)
             except TimeoutError:
                 continue
 
     def send(self, msg, addr):
-        self.server.sendto(msg.encode(FORMAT), addr)
+        self.server.sendto(msg, addr)

@@ -25,28 +25,24 @@ class ClientHandler:
         self.server.remove_connection(self.addr)
 
     def compare_checksum(self, msg):
-        sent_checksum = int(msg[CHECKSUM_START:CHECKSUM_END])
+        sent_checksum = msg[CHECKSUM_START:CHECKSUM_END]
         server_checksum = msg[:CHECKSUM_START] + msg[CHECKSUM_END:]
-        if zlib.crc32(server_checksum.encode(FORMAT)) != sent_checksum:
+        if zlib.crc32(server_checksum).to_bytes(4, 'big') != sent_checksum:
             return False
         return True
 
     def create_frag_num(self):
-        frag = str(self.next_fragment)
-        while len(frag) != 6:
-            frag = "0" + frag
+        frag = self.next_fragment.to_bytes(6, 'big')
         return frag
 
     def create_check_sum(self, msg):
-        checksum = str(zlib.crc32(msg.encode(FORMAT)))
-        while len(checksum) != 10:
-            checksum = "0" + checksum
-        return str(checksum)
+        checksum = zlib.crc32(msg).to_bytes(4, 'big')
+        return checksum
 
     def check_frag_number(self, msg):
         if msg[FRAG_NUM_START:FRAG_NUM_END] == NO_FRAGMENT:
             return True
-        if int(msg[FRAG_NUM_START:FRAG_NUM_END]) != self.next_fragment:
+        if msg[FRAG_NUM_START:FRAG_NUM_END] != self.next_fragment.to_bytes(6, 'big'):
             return False
         return True
 
@@ -65,13 +61,13 @@ class ClientHandler:
             return
         if msg[FRAG_NUM_START:FRAG_NUM_END] != NO_FRAGMENT:
             print(f'{self.addr}] fragment {self.next_fragment} recieved')
-            self.current_txt_msg.append(msg[HEADER_SIZE:])
+            self.current_txt_msg.append(msg[HEADER_SIZE:].decode(FORMAT))
             self.next_fragment += 1
             response = ACK + NONE + self.create_frag_num()
             checksum = self.create_check_sum(response)
             self.server.send(response + checksum, self.addr)
         else:
-            print(f"Message from {self.addr} client: " + msg[HEADER_SIZE:])
+            print(f"Message from {self.addr} client: " + msg[HEADER_SIZE:].decode(FORMAT))
             response = ACK + NONE + NO_FRAGMENT
             checksum = self.create_check_sum(response)
             self.server.send(response + checksum, self.addr)
@@ -91,7 +87,7 @@ class ClientHandler:
             return
         if msg[FRAG_NUM_START:FRAG_NUM_END] == FIRST_FILE_PACKET:
             print(f'{self.addr}] fragment {self.next_fragment} recieved')
-            self.transfered_file_name = DOWNLOAD_PATH + msg[HEADER_SIZE:]
+            self.transfered_file_name = DOWNLOAD_PATH + msg[HEADER_SIZE:].decode(FORMAT)
             self.next_fragment += 1
             self.transfer_file_pointer = open(self.transfered_file_name, 'wb')
             response = ACK + NONE + self.create_frag_num()
@@ -100,7 +96,7 @@ class ClientHandler:
         else:
             print(f'{self.addr}] fragment {self.next_fragment} recieved')
             self.next_fragment += 1
-            file_data = msg[HEADER_SIZE:].encode(FORMAT)
+            file_data = msg[HEADER_SIZE:]
             self.transfer_file_pointer.write(file_data)
             response = ACK + NONE + self.create_frag_num()
             checksum = self.create_check_sum(response)
@@ -142,7 +138,6 @@ class ClientHandler:
             self.transfered_file_name = None
 
     def process_packet(self, msg):
-
         if msg[PACKET_TYPE_START:PACKET_TYPE_END] == DATA:
             self.process_data_packet(msg)
         elif msg[PACKET_TYPE_START:PACKET_TYPE_END] == FIN:
