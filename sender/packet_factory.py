@@ -1,57 +1,44 @@
-import zlib
-
-from helpers.consts import HEADER_SIZE, TXT, FILE, DATA, NO_FRAGMENT, FORMAT, FRAG_NUM_LENGTH, CHECKSUM_LENGTH
+from helpers import util
+from helpers.consts import HEADER_SIZE, TXT, FILE, DATA, NO_FRAGMENT, FORMAT
 
 
 class PacketFactory:
-    def __init__(self, msg_type, fragment_size, msg=None, file_name=None):
-        self.msg_type = msg_type
-        self.fragment_size = fragment_size
-        self.msg = msg
-        self.file_name = file_name
-
-    def create_frag_num(self, num):
-        frag = num.to_bytes(FRAG_NUM_LENGTH, 'big')
-        return frag
-
-    def create_check_sum(self, msg):
-        checksum = zlib.crc32(msg).to_bytes(CHECKSUM_LENGTH, 'big')
-        return checksum
-
-    def create_txt_packets(self):
+    @staticmethod
+    def create_txt_packets(fragment_size, msg):
         fragmented_packets = []
-        if len(self.msg) > (int(self.fragment_size) - int(HEADER_SIZE)):
+        if len(msg) > (int(fragment_size) - int(HEADER_SIZE)):
             fragment_count = 1
-            while self.msg:
-                header = DATA + TXT + self.create_frag_num(fragment_count)
-                txt_msg = self.msg[:int(self.fragment_size) - int(HEADER_SIZE)].encode(FORMAT)
-                checksum = self.create_check_sum(header + txt_msg)
+            while msg:
+                header = DATA + TXT + util.create_frag_from_num(fragment_count)
+                txt_msg = msg[:int(fragment_size) - int(HEADER_SIZE)].encode(FORMAT)
+                checksum = util.create_check_sum(header + txt_msg)
                 fragmented_packets.append(header + checksum + txt_msg)
                 fragment_count += 1
-                self.msg = self.msg[int(self.fragment_size) - int(HEADER_SIZE):]
+                msg = msg[int(fragment_size) - int(HEADER_SIZE):]
 
             return fragmented_packets
         else:
             header = DATA + TXT + NO_FRAGMENT
-            txt_msg = self.msg.encode(FORMAT)
-            checksum = self.create_check_sum(header + txt_msg)
+            txt_msg = msg.encode(FORMAT)
+            checksum = util.create_check_sum(header + txt_msg)
             return header + checksum + txt_msg
 
-    def create_file_packets(self):
-        first_header = DATA + FILE + self.create_frag_num(1)
-        packet_msg = self.file_name.encode(FORMAT)
-        checksum = self.create_check_sum(first_header + packet_msg)
+    @staticmethod
+    def create_file_packets(file_name, fragment_size):
+        first_header = DATA + FILE + util.create_frag_from_num(1)
+        packet_msg = file_name.encode(FORMAT)
+        checksum = util.create_check_sum(first_header + packet_msg)
         fragmented_packets = [first_header + checksum + packet_msg]
-        buffer = (self.fragment_size - HEADER_SIZE)
+        buffer = (fragment_size - HEADER_SIZE)
         fragment_count = 2
-        with open(self.file_name, 'rb') as file:
+        with open(file_name, 'rb') as file:
             while True:
                 data = file.read(buffer)
                 if not data:
                     break
-                packet_header = DATA + FILE + self.create_frag_num(fragment_count)
+                packet_header = DATA + FILE + util.create_frag_from_num(fragment_count)
                 fragment_count += 1
-                checksum = self.create_check_sum(packet_header + data)
+                checksum = util.create_check_sum(packet_header + data)
                 fragmented_packets.append(packet_header + checksum + data)
 
         return fragmented_packets

@@ -1,7 +1,8 @@
 import ipaddress
 import os
+import zlib
 
-from helpers.consts import PROTOCOL_SIZE, LOWEST_FRAGMENT_SIZE
+from helpers.consts import PROTOCOL_SIZE, LOWEST_FRAGMENT_SIZE, FRAG_NUM_LENGTH, CHECKSUM_END, CHECKSUM_START
 
 
 def validate_ip_address(ip_string):
@@ -41,3 +42,20 @@ def validate_fragment_size(size):
 def validate_file_path(path):
     check = os.path.exists(path)
     return check
+
+
+def create_frag_from_num(num):
+    return num.to_bytes(FRAG_NUM_LENGTH, 'big')
+
+
+def create_check_sum(msg):
+    checksum = zlib.crc32(msg).to_bytes(4, 'big')
+    return checksum
+
+def compare_checksum(msg):
+    sent_checksum = msg[CHECKSUM_START:CHECKSUM_END]
+    server_checksum = msg[:CHECKSUM_START] + msg[CHECKSUM_END:]
+    if zlib.crc32(server_checksum).to_bytes(4, 'big') != sent_checksum:
+        return False
+    return True
+
