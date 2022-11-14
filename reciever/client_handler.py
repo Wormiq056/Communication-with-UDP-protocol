@@ -4,7 +4,7 @@ from time import sleep
 from helpers import util
 from helpers.consts import HEADER_SIZE, PACKET_TYPE_START, PACKET_TYPE_END, ACK, FIN, REQUEST, \
     MSG_TYPE_START, MSG_TYPE_END, NONE, TXT, FILE, DATA, FRAG_NUM_START, FRAG_NUM_END, NO_FRAGMENT, \
-    FAIL, FORMAT, FIRST_FILE_PACKET, DOWNLOAD_PATH
+    FAIL, FORMAT, FIRST_FILE_PACKET, DOWNLOAD_PATH, SLIDING_WINDOW_SIZE
 
 
 class ClientHandler:
@@ -17,11 +17,15 @@ class ClientHandler:
         self.go_back_n_dict = {}
         self.correct_fragments = 0
 
+
     def reset_connection_time(self):
         self.connection_time = 6
 
     def hold_connection(self):
         while self.connection_time != 0:
+            if self.server.stopped():
+                sleep(1)
+                continue
             sleep(1)
             self.connection_time -= 1
         self.server.remove_connection(self.addr)
@@ -30,6 +34,7 @@ class ClientHandler:
         if not util.compare_checksum(msg):
             print(f'[CLIENT] {self.addr} sent corrupted packet, sending error')
             self.num_of_incorrect_packets += 1
+            self.correct_fragments -= SLIDING_WINDOW_SIZE - 1
             self.create_and_send_response(REQUEST + FAIL + msg[FRAG_NUM_START:FRAG_NUM_END])
             return
 
@@ -46,6 +51,7 @@ class ClientHandler:
     def process_file_packet(self, msg):
         if not util.compare_checksum(msg):
             self.num_of_incorrect_packets += 1
+            self.correct_fragments -= SLIDING_WINDOW_SIZE - 1
             print(f'[CLIENT] {self.addr} sent corrupted packet, sending error')
             self.create_and_send_response(REQUEST + FAIL + msg[FRAG_NUM_START:FRAG_NUM_END])
             return
@@ -69,7 +75,7 @@ class ClientHandler:
 
     def create_and_send_response(self, response):
         checksum = util.create_check_sum(response)
-        self.server.send(response + checksum)
+        self.server.send(response + checksum,self.addr)
 
     def process_fin(self, msg):
         if not util.compare_checksum(msg):
