@@ -28,7 +28,7 @@ class ProgramInterface:
 
     def command_loop(self):
         while True:
-            command = input("[COMMAND]:\n")
+            command = input("[COMMAND]: ")
             if command == 'send':
                 self.server.pause()
                 if not self.client:
@@ -41,9 +41,13 @@ class ProgramInterface:
                         print('[INFO] Message sending interrupted')
                         self.client.close()
                         self.connection_error()
+                    except Exception:
+                        print('[ERROR] Looks like server has been turned off')
+                        self.client.close()
+                        self.connection_error()
                 else:
                     try:
-                        self.client.create_msg()
+                        self.client.initialize()
                     except KeyboardInterrupt:
                         print('[INFO] Message sending interrupted')
                     except Exception:

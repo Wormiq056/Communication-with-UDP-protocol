@@ -21,7 +21,7 @@ class ClientHandler:
         self.connection_time = 6
 
     def hold_connection(self):
-        while self.connection_time != 0:
+        while self.connection_time != 0 and self.server.running:
             if self.server.stopped():
                 sleep(1)
                 continue
@@ -111,6 +111,7 @@ class ClientHandler:
         self.correct_fragments = 0
 
     def process_packet(self, msg):
+        self.reset_connection_time()
         if msg[PACKET_TYPE_START:PACKET_TYPE_END] == DATA:
             self.process_data_packet(msg)
         elif msg[PACKET_TYPE_START:PACKET_TYPE_END] == FIN:
@@ -119,8 +120,6 @@ class ClientHandler:
             if msg[MSG_TYPE_START:MSG_TYPE_END] == FAIL:
                 self.server.remove_connection(self.addr)
             elif msg[MSG_TYPE_START:MSG_TYPE_END] == NONE:
-                response = ACK + NONE + NO_FRAGMENT
-                checksum = util.create_check_sum(response)
-                self.server.send(response + checksum, self.addr)
-        elif msg[PACKET_TYPE_START:PACKET_TYPE_END] == ACK:
-            self.reset_connection_time()
+                self.create_and_send_response(ACK + NONE + NO_FRAGMENT)
+
+

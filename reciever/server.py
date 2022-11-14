@@ -27,7 +27,6 @@ class Server(threading.Thread):
 
     def revive(self):
         print("[SERVER] Listening on {} : {}".format(self.target_host, self.target_port))
-        print(f'[SERVER] Active connections {self.active_connections}')
         self._stop.clear()
 
     def pause(self):
@@ -48,7 +47,7 @@ class Server(threading.Thread):
         new_client.process_packet(msg)
 
     def remove_connection(self, addr):
-        if self.connections[addr]:
+        if self.connections[addr] and self.running:
             self.active_connections -= 1
             self.connections[addr] = None
             print(f'[DISCONNECTED] {addr}.')

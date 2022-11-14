@@ -5,7 +5,7 @@ from time import sleep
 from helpers import util
 from helpers.consts import PACKET_TYPE_START, PACKET_TYPE_END, ACK, FIN, REQUEST, MSG_TYPE_START, MSG_TYPE_END, NONE, \
     NO_FRAGMENT, FAIL, PROTOCOL_SIZE, LOWEST_FRAGMENT_SIZE, TXT, FRAG_NUM_START, FRAG_NUM_END, SLIDING_WINDOW_SIZE, \
-    FIRST_FILE_PACKET, TEST_CHECKSUM, DATA, FILE, TEST_FILE_PATH
+    FIRST_FILE_PACKET, NO_CHECKSUM, DATA, FILE, TEST_FILE_PATH
 from sender.packet_factory import PacketFactory
 
 
@@ -18,12 +18,13 @@ class Client:
         self.app = app
         self.client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.client.settimeout(2)
-        self.keep_connection_thread = True
+        self.keep_connection_thread = False
 
     def keep_connection(self):
         while self.keep_connection_thread:
-            self.create_and_send_packet(ACK + NONE + NO_FRAGMENT)
+            self.create_and_send_packet(ACK + NONE + NO_FRAGMENT + NO_CHECKSUM)
             sleep(5)
+
 
     def create_and_send_packet(self, msg):
         checksum = util.create_check_sum(msg)
@@ -53,7 +54,8 @@ class Client:
 
     def initialize(self):
         remaining_tries = 3
-        self.choose_port_host()
+        if not self.keep_connection_thread:
+            self.choose_port_host()
         while True:
             try:
                 self.create_and_send_packet(REQUEST + NONE + NO_FRAGMENT)
@@ -62,6 +64,7 @@ class Client:
                     print(msg[PACKET_TYPE_START:PACKET_TYPE_END])
                     if remaining_tries <= 0:
                         print(f'[CONNECTION] {self.target_host} is unreachable')
+                        self.keep_connection_thread = False
                         return
                     remaining_tries -= 1
                     print(f'[CONNECTION] Connection to {self.target_host} failed, remaining tries {remaining_tries}')
@@ -69,15 +72,18 @@ class Client:
                 break
             except Exception:
                 if remaining_tries <= 0:
+                    self.keep_connection_thread = False
                     print(f'[CONNECTION] {self.target_host} is unreachable')
                     self.app.connection_error()
                     return
                 remaining_tries -= 1
                 print(f'[CONNECTION] Connection to {self.target_host} failed, remaining tries {remaining_tries}')
                 continue
-        print(f'[CONNECTION] Connection to {self.target_host} established')
-        self.connection_thread = Thread(target=self.keep_connection)
-        self.connection_thread.start()
+        if not self.keep_connection_thread:
+            self.keep_connection_thread = True
+            print(f'[CONNECTION] Connection to {self.target_host} established')
+            self.connection_thread = Thread(target=self.keep_connection)
+            self.connection_thread.start()
         self.create_msg()
 
     def send(self, msg):
@@ -85,7 +91,9 @@ class Client:
 
     def close(self):
         self.keep_connection_thread = False
-        self.connection_thread.join()
+        if self.connection_thread:
+            print(f"[INFO] Closing connection to {self.target_host, self.target_port}")
+            self.connection_thread.join()
         self.create_and_send_packet(REQUEST + FAIL + NO_FRAGMENT)
 
     def no_frag_transfer(self, packet):
@@ -157,6 +165,7 @@ class Client:
         elif isinstance(packets, list):
             self.frag_transfer(packets)
 
+
     def create_msg(self):
         while True:
             msg_type = input("[INPUT] What type of message, file or text?(f/t): ")
@@ -203,11 +212,12 @@ class Client:
             print(f"[TESTING] Sending {TEST_FILE_PATH} to the server")
         self.error_simulation(packets)
 
+
     def error_simulation(self, packets):
         msg_type = packets[0][MSG_TYPE_START:MSG_TYPE_END]
         remaining_tries = 1
         first_packet = packets[0]
-        packets[0] = DATA + msg_type + FIRST_FILE_PACKET + TEST_CHECKSUM
+        packets[0] = DATA + msg_type + FIRST_FILE_PACKET + NO_CHECKSUM
         not_acked_packets = packets
         while not_acked_packets:
             self.send_created_packets(not_acked_packets[:SLIDING_WINDOW_SIZE])
