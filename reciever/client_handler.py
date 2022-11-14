@@ -17,7 +17,6 @@ class ClientHandler:
         self.go_back_n_dict = {}
         self.correct_fragments = 0
 
-
     def reset_connection_time(self):
         self.connection_time = 6
 
@@ -75,7 +74,7 @@ class ClientHandler:
 
     def create_and_send_response(self, response):
         checksum = util.create_check_sum(response)
-        self.server.send(response + checksum,self.addr)
+        self.server.send(response + checksum, self.addr)
 
     def process_fin(self, msg):
         if not util.compare_checksum(msg):

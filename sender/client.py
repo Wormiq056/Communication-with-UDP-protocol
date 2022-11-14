@@ -1,4 +1,3 @@
-import os
 import socket
 from threading import Thread
 from time import sleep
@@ -6,7 +5,7 @@ from time import sleep
 from helpers import util
 from helpers.consts import PACKET_TYPE_START, PACKET_TYPE_END, ACK, FIN, REQUEST, MSG_TYPE_START, MSG_TYPE_END, NONE, \
     NO_FRAGMENT, FAIL, PROTOCOL_SIZE, LOWEST_FRAGMENT_SIZE, TXT, FRAG_NUM_START, FRAG_NUM_END, SLIDING_WINDOW_SIZE, \
-    FIRST_FILE_PACKET, TEST_CHECKSUM, DATA, FILE
+    FIRST_FILE_PACKET, TEST_CHECKSUM, DATA, FILE, TEST_FILE_PATH
 from sender.packet_factory import PacketFactory
 
 
@@ -193,13 +192,15 @@ class Client:
                 packets = PacketFactory.create_file_packets(file_path, int(fragment_size))
                 self.start_transfer(packets)
 
-
     def simulate_error(self, test_type):
-        print("[TESTING] Starting simulation for TXT message with corrupted packet")
         if test_type == TXT:
-            packets = PacketFactory.create_test_txt_packets()
+            print(f"[TESTING] Starting simulation for TXT message with corrupted packet")
+            genereted_msg, packets = PacketFactory.create_test_txt_packets()
+            print(f'[TESTING] Generated message: {genereted_msg}')
         else:
+            print(f"[TESTING] Starting simulation for FILE transfer with corrupted packet")
             packets = PacketFactory.create_test_file_packets()
+            print(f"[TESTING] Sending {TEST_FILE_PATH} to the server")
         self.error_simulation(packets)
 
     def error_simulation(self, packets):

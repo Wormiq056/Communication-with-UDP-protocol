@@ -1,6 +1,7 @@
+import os
 import random
 import string
-import os
+
 from helpers import util
 from helpers.consts import HEADER_SIZE, TXT, FILE, DATA, NO_FRAGMENT, FORMAT, TEST_TXT_NUM_OF_PACKETS, \
     TEST_TXT_FRAGMENT_SIZE, TEST_FILE_FRAGMENT_SIZE, TEST_FILE_PATH
@@ -50,16 +51,17 @@ class PacketFactory:
     @staticmethod
     def create_test_txt_packets():
         test_packets = []
-
+        generated_msg = ""
         for i in range(TEST_TXT_NUM_OF_PACKETS):
             msg = ''.join(
                 random.choices(string.ascii_uppercase + string.digits, k=TEST_TXT_FRAGMENT_SIZE - HEADER_SIZE)).encode(
                 FORMAT)
+            generated_msg = generated_msg + msg.decode(FORMAT)
             packet_header = DATA + TXT + util.create_frag_from_num(i + 1)
             checksum = util.create_check_sum(packet_header + msg)
             test_packets.append(packet_header + checksum + msg)
 
-        return test_packets
+        return generated_msg, test_packets
 
     @staticmethod
     def create_test_file_packets():

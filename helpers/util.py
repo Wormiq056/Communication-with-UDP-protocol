@@ -1,7 +1,6 @@
 import ipaddress
 import os
 import zlib
-import random
 
 from helpers.consts import PROTOCOL_SIZE, LOWEST_FRAGMENT_SIZE, FRAG_NUM_LENGTH, CHECKSUM_END, CHECKSUM_START
 
@@ -62,5 +61,3 @@ def compare_checksum(msg):
     if zlib.crc32(server_checksum).to_bytes(4, 'big') != sent_checksum:
         return False
     return True
-
-
