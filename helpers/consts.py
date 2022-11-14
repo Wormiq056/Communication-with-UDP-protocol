@@ -1,12 +1,14 @@
-HEADER_SIZE = 14
-PROTOCOL_SIZE = 1458
-FORMAT = 'utf-8'
-DOWNLOAD_PATH = './Downloads/'
-LOWEST_FRAGMENT_SIZE = 20
+# ------- Server consts -------
 TARGET_HOST = "127.0.0.1"
 TARGET_PORT = 2222
-SLIDING_WINDOW_SIZE = 4
+DOWNLOAD_PATH = './Downloads/'
+FORMAT = 'utf-8'
 
+# ------- Protocol consts -------
+HEADER_SIZE = 14
+PROTOCOL_SIZE = 1458
+LOWEST_FRAGMENT_SIZE = 20
+SLIDING_WINDOW_SIZE = 4
 
 # ------- Packet Type -------
 PACKET_TYPE_START = 0

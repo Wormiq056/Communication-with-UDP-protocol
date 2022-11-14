@@ -1,7 +1,7 @@
-from time import sleep
 import collections
-from helpers import util
+from time import sleep
 
+from helpers import util
 from helpers.consts import HEADER_SIZE, PACKET_TYPE_START, PACKET_TYPE_END, ACK, FIN, REQUEST, \
     MSG_TYPE_START, MSG_TYPE_END, NONE, TXT, FILE, DATA, FRAG_NUM_START, FRAG_NUM_END, NO_FRAGMENT, \
     FAIL, FORMAT, FIRST_FILE_PACKET, DOWNLOAD_PATH
@@ -12,7 +12,7 @@ class ClientHandler:
         self.addr = addr
         self.server = server
         self.connection_time = 6
-        self.transfered_file_name = ""
+        self.file_name = ""
         self.num_of_incorrect_packets = 0
         self.go_back_n_dict = {}
         self.correct_fragments = 0
@@ -35,7 +35,7 @@ class ClientHandler:
 
         if msg[FRAG_NUM_START:FRAG_NUM_END] != NO_FRAGMENT:
             self.correct_fragments += 1
-            print(f'[CLIENT] {self.addr} fragment {int.from_bytes(msg[FRAG_NUM_START:FRAG_NUM_END])} recieved')
+            print(f'[CLIENT] {self.addr} fragment {int.from_bytes(msg[FRAG_NUM_START:FRAG_NUM_END], "big")} recieved')
             self.go_back_n_dict[int.from_bytes(msg[FRAG_NUM_START:FRAG_NUM_END], 'big')] = msg[HEADER_SIZE:]
             self.create_and_send_response(ACK + NONE + msg[FRAG_NUM_START:FRAG_NUM_END])
         else:
@@ -51,12 +51,12 @@ class ClientHandler:
             return
 
         if msg[FRAG_NUM_START:FRAG_NUM_END] == FIRST_FILE_PACKET:
-            print(f'[CLIENT] {self.addr} fragment {int.from_bytes(msg[FRAG_NUM_START:FRAG_NUM_END])} recieved')
-            self.transfered_file_name = DOWNLOAD_PATH + msg[HEADER_SIZE:].decode(FORMAT)
+            print(f'[CLIENT] {self.addr} fragment {int.from_bytes(msg[FRAG_NUM_START:FRAG_NUM_END], "big")} recieved')
+            self.file_name = DOWNLOAD_PATH + msg[HEADER_SIZE:].decode(FORMAT)
             self.create_and_send_response(ACK + NONE + msg[FRAG_NUM_START:FRAG_NUM_END])
             self.correct_fragments += 1
         else:
-            print(f'[CLIENT] {self.addr} fragment {int.from_bytes(msg[FRAG_NUM_START:FRAG_NUM_END])} recieved')
+            print(f'[CLIENT] {self.addr} fragment {int.from_bytes(msg[FRAG_NUM_START:FRAG_NUM_END], "big")} recieved')
             self.go_back_n_dict[int.from_bytes(msg[FRAG_NUM_START:FRAG_NUM_END], 'big')] = msg[HEADER_SIZE:]
             self.create_and_send_response(ACK + NONE + msg[FRAG_NUM_START:FRAG_NUM_END])
             self.correct_fragments += 1
@@ -84,18 +84,17 @@ class ClientHandler:
                 client_msg = client_msg + value.decode(FORMAT)
             print(f"[CLIENT] Message from {self.addr} client: " + client_msg)
 
-
         elif msg[MSG_TYPE_START:MSG_TYPE_END] == FILE:
             self.dump_file()
-            print(f"[CLIENT] File was successfully downloaded and saved to : {self.transfered_file_name}")
-            self.transfered_file_name = ""
+            print(f"[CLIENT] File was successfully downloaded and saved to : {self.file_name}")
+            self.file_name = ""
 
         self.go_back_n_dict.clear()
         self.transmission_statistics()
 
     def dump_file(self):
         sorted_dict = collections.OrderedDict(sorted(self.go_back_n_dict.items()))
-        with open(self.transfered_file_name, 'wb') as file:
+        with open(self.file_name, 'wb') as file:
             for value in sorted_dict.values():
                 file.write(value)
         self.go_back_n_dict.clear()

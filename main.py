@@ -80,7 +80,7 @@ class ProgramInterface:
                 if util.validate_ip_address(host):
                     self.target_host = host
                     break
-                print("[ERROR] Choose a valid IP adress")
+                print("[ERROR] Choose a valid IP address")
         while True:
             port = (input("[INPUT] Choose server port(default 2222): "))
             if port == "":
@@ -94,7 +94,7 @@ class ProgramInterface:
 
 
 def main():
-    app = ProgramInterface()
+    ProgramInterface()
 
 
 if __name__ == '__main__':
