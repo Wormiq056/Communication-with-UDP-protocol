@@ -121,5 +121,3 @@ class ClientHandler:
                 self.server.remove_connection(self.addr)
             elif msg[MSG_TYPE_START:MSG_TYPE_END] == NONE:
                 self.create_and_send_response(ACK + NONE + NO_FRAGMENT)
-
-

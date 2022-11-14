@@ -41,7 +41,7 @@ class ProgramInterface:
                         print('[INFO] Message sending interrupted')
                         self.client.close()
                         self.connection_error()
-                    except Exception:
+                    except ConnectionError:
                         print('[ERROR] Looks like server has been turned off')
                         self.client.close()
                         self.connection_error()
@@ -50,7 +50,11 @@ class ProgramInterface:
                         self.client.initialize()
                     except KeyboardInterrupt:
                         print('[INFO] Message sending interrupted')
-                    except Exception:
+                    except ConnectionError:
+                        print('[ERROR] Looks like server has been turned off')
+                        self.client.close()
+                        self.connection_error()
+                    except TimeoutError:
                         print('[ERROR] Looks like server has been turned off')
                         self.client.close()
                         self.connection_error()

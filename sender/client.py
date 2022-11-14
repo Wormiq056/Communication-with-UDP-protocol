@@ -25,7 +25,6 @@ class Client:
             self.create_and_send_packet(ACK + NONE + NO_FRAGMENT + NO_CHECKSUM)
             sleep(5)
 
-
     def create_and_send_packet(self, msg):
         checksum = util.create_check_sum(msg)
         self.send(msg + checksum)
@@ -70,7 +69,16 @@ class Client:
                     print(f'[CONNECTION] Connection to {self.target_host} failed, remaining tries {remaining_tries}')
                     continue
                 break
-            except Exception:
+            except ConnectionError:
+                if remaining_tries <= 0:
+                    self.keep_connection_thread = False
+                    print(f'[CONNECTION] {self.target_host} is unreachable')
+                    self.app.connection_error()
+                    return
+                remaining_tries -= 1
+                print(f'[CONNECTION] Connection to {self.target_host} failed, remaining tries {remaining_tries}')
+                continue
+            except TimeoutError:
                 if remaining_tries <= 0:
                     self.keep_connection_thread = False
                     print(f'[CONNECTION] {self.target_host} is unreachable')
@@ -91,7 +99,7 @@ class Client:
 
     def close(self):
         self.keep_connection_thread = False
-        if self.connection_thread:
+        if self.connection_thread.is_alive():
             print(f"[INFO] Closing connection to {self.target_host, self.target_port}")
             self.connection_thread.join()
         self.create_and_send_packet(REQUEST + FAIL + NO_FRAGMENT)
@@ -165,7 +173,6 @@ class Client:
         elif isinstance(packets, list):
             self.frag_transfer(packets)
 
-
     def create_msg(self):
         while True:
             msg_type = input("[INPUT] What type of message, file or text?(f/t): ")
@@ -211,7 +218,6 @@ class Client:
             packets = PacketFactory.create_test_file_packets()
             print(f"[TESTING] Sending {TEST_FILE_PATH} to the server")
         self.error_simulation(packets)
-
 
     def error_simulation(self, packets):
         msg_type = packets[0][MSG_TYPE_START:MSG_TYPE_END]
