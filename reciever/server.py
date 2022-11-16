@@ -12,6 +12,7 @@ class Server(threading.Thread):
     connections = {}
     active_connections = 0
     running = True
+    program_interface = None
 
     def __init__(self, *args, **kwargs):
         super(Server, self).__init__(*args, **kwargs)
@@ -19,10 +20,11 @@ class Server(threading.Thread):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.server.settimeout(1)
 
-    def bind(self, host, port):
+    def bind(self, host, port, interface):
         self.target_host = host
         self.target_port = port
         self.server.bind((self.target_host, self.target_port))
+        self.program_interface = interface
         print("[SERVER] Listening on {} : {}".format(self.target_host, self.target_port))
 
     def revive(self):
@@ -70,6 +72,9 @@ class Server(threading.Thread):
                     self.handle_client(msg, addr)
             except TimeoutError:
                 continue
+            except ConnectionResetError:
+                self.close()
+                self.program_interface.server_error()
 
     def send(self, msg, addr):
         self.server.sendto(msg, addr)

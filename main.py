@@ -5,20 +5,21 @@ from helpers.consts import TARGET_HOST, TARGET_PORT
 
 
 class ProgramInterface:
-    target_host = TARGET_HOST
-    target_port = TARGET_PORT
-    server = None
 
     def __init__(self):
+        self.target_host = TARGET_HOST
+        self.target_port = TARGET_PORT
+        self.server = None
         self.connected = False
         self.client = None
+        self.running = True
         self.choose_target()
         self.start_server()
 
     def start_server(self):
         try:
             self.server = Server()
-            self.server.bind(self.target_host, self.target_port)
+            self.server.bind(self.target_host, self.target_port, self)
             self.server.start()
         except Exception as e:
             print("[INFO] Server did not start correctly")
@@ -27,7 +28,7 @@ class ProgramInterface:
         self.command_loop()
 
     def command_loop(self):
-        while True:
+        while self.running:
             command = input("[COMMAND]: ")
             if command == 'send':
                 self.server.pause()
@@ -41,7 +42,7 @@ class ProgramInterface:
                         print('[INFO] Message sending interrupted')
                         self.client.close()
                         self.connection_error()
-                    except ConnectionError:
+                    except ConnectionResetError:
                         print('[ERROR] Looks like server has been turned off')
                         self.client.close()
                         self.connection_error()
@@ -50,7 +51,7 @@ class ProgramInterface:
                         self.client.initialize()
                     except KeyboardInterrupt:
                         print('[INFO] Message sending interrupted')
-                    except ConnectionError:
+                    except ConnectionResetError:
                         print('[ERROR] Looks like server has been turned off')
                         self.client.close()
                         self.connection_error()
@@ -74,6 +75,9 @@ class ProgramInterface:
                     print("[ERROR] Invalid argument (try: send, close, exit)")
                 else:
                     print("[ERROR] Invalid argument (try: send, exit)")
+
+    def server_error(self):
+        self.running = False
 
     def connection_error(self):
         self.connected = False

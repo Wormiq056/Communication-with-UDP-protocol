@@ -5,7 +5,7 @@ from time import sleep
 from helpers import util
 from helpers.consts import PACKET_TYPE_START, PACKET_TYPE_END, ACK, FIN, REQUEST, MSG_TYPE_START, MSG_TYPE_END, NONE, \
     NO_FRAGMENT, FAIL, PROTOCOL_SIZE, LOWEST_FRAGMENT_SIZE, TXT, FRAG_NUM_START, FRAG_NUM_END, SLIDING_WINDOW_SIZE, \
-    FIRST_FILE_PACKET, NO_CHECKSUM, DATA, FILE, TEST_FILE_PATH
+    FIRST_FILE_PACKET, NO_CHECKSUM, DATA, FILE, SIMULATION_FILE_PATH, HEADER_SIZE
 from sender.packet_factory import PacketFactory
 
 
@@ -19,6 +19,10 @@ class Client:
         self.client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.client.settimeout(2)
         self.keep_connection_thread = False
+        self.total_number_of_packets_send = 0
+        self.number_of_incorrect_packets_send = 0
+        self.msg_packet_length = 0
+        self.msg_byte_length = 0
 
     def keep_connection(self):
         while self.keep_connection_thread:
@@ -69,7 +73,7 @@ class Client:
                     print(f'[CONNECTION] Connection to {self.target_host} failed, remaining tries {remaining_tries}')
                     continue
                 break
-            except ConnectionError:
+            except ConnectionResetError:
                 if remaining_tries <= 0:
                     self.keep_connection_thread = False
                     print(f'[CONNECTION] {self.target_host} is unreachable')
@@ -107,17 +111,25 @@ class Client:
     def no_frag_transfer(self, packet):
         while True:
             try:
+                self.total_number_of_packets_send += 1
                 self.send(packet)
                 msg, addr = self.client.recvfrom(PROTOCOL_SIZE)
+                if not util.compare_checksum(msg):
+                    print("[ERROR] Server sent corrupted packet, resending packets")
                 if msg[PACKET_TYPE_START:PACKET_TYPE_END] == ACK:
                     break
                 else:
+                    self.number_of_incorrect_packets_send += 1
+                    print("[ERROR] Server received corrupted packet, resending packets")
                     continue
             except TimeoutError:
+                print("[ERROR] Server did not ACK packet resending packet")
                 continue
+        self.transfer_statistics()
         print('[INFO] Message was sent successfully')
 
     def send_created_packets(self, packets):
+        self.total_number_of_packets_send += len(packets)
         for packet in packets:
             self.send(packet)
 
@@ -135,9 +147,12 @@ class Client:
                         if not not_acked_packets:
                             return True
                 elif msg[PACKET_TYPE_START:PACKET_TYPE_END] == REQUEST:
+                    self.number_of_incorrect_packets_send += 1
                     print("[ERROR] Server received corrupted packet, resending packets")
                     return False
             except TimeoutError:
+                print("[ERROR] Server did not ACK sent packet, resending packets")
+                self.number_of_incorrect_packets_send += 1
                 return False
 
     def frag_transfer(self, packets):
@@ -162,15 +177,35 @@ class Client:
                 continue
             except TimeoutError:
                 continue
+
+        self.transfer_statistics()
         if msg_type == TXT:
             print('[INFO] Message was sent successfully')
         else:
             print('[INFO] File was sent successfully')
 
+    def transfer_statistics(self):
+        print(f"[STATISTICS] Packets needed for message transfer {self.msg_packet_length}")
+        print(f"[STATISTICS] Message raw byte length {self.msg_byte_length} bytes")
+        print(f"[STATISTICS] Number of total packets sent {self.total_number_of_packets_send}")
+        print(f"[STATISTICS] Number of incorrect packets sent {self.number_of_incorrect_packets_send}")
+        self.msg_byte_length = 0
+        self.msg_packet_length = 0
+        self.total_number_of_packets_send = 0
+        self.number_of_incorrect_packets_send = 0
+
+    def calculate_bytes_of_msg(self, packets):
+        for packet in packets:
+            self.msg_byte_length += len(packet) - HEADER_SIZE
+
     def start_transfer(self, packets):
         if isinstance(packets, bytes):
+            self.msg_packet_length = len(packets) - HEADER_SIZE
+            self.msg_byte_length += len(packets) - HEADER_SIZE
             self.no_frag_transfer(packets)
         elif isinstance(packets, list):
+            self.msg_packet_length = len(packets)
+            self.calculate_bytes_of_msg(packets)
             self.frag_transfer(packets)
 
     def create_msg(self):
@@ -209,17 +244,20 @@ class Client:
                 self.start_transfer(packets)
 
     def simulate_error(self, test_type):
+
         if test_type == TXT:
-            print(f"[TESTING] Starting simulation for TXT message with corrupted packet")
-            genereted_msg, packets = PacketFactory.create_test_txt_packets()
-            print(f'[TESTING] Generated message: {genereted_msg}')
+            print(f"[SIMULATION] Starting simulation for TXT message with corrupted packet")
+            genereted_msg, packets = PacketFactory.create_simulation_txt_packets()
+            print(f'[SIMULATION] Generated message: {genereted_msg}')
         else:
-            print(f"[TESTING] Starting simulation for FILE transfer with corrupted packet")
-            packets = PacketFactory.create_test_file_packets()
-            print(f"[TESTING] Sending {TEST_FILE_PATH} to the server")
+            print(f"[SIMULATION] Starting simulation for FILE transfer with corrupted packet")
+            packets = PacketFactory.create_simulation_file_packets()
+            print(f"[SIMULATION] Sending {SIMULATION_FILE_PATH} to the server")
         self.error_simulation(packets)
 
     def error_simulation(self, packets):
+        self.msg_packet_length = len(packets)
+        self.calculate_bytes_of_msg(packets)
         msg_type = packets[0][MSG_TYPE_START:MSG_TYPE_END]
         remaining_tries = 1
         first_packet = packets[0]
@@ -243,8 +281,8 @@ class Client:
                 continue
             except TimeoutError:
                 continue
-
+        self.transfer_statistics()
         if msg_type == TXT:
-            print('[TESTING] Message was sent successfully')
+            print('[SIMULATION] Message was sent successfully')
         else:
-            print('[TESTING] File was sent successfully')
+            print('[SIMULATION] File was sent successfully')
