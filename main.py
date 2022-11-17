@@ -1,12 +1,15 @@
-from reciever.server import Server
 from sender.client import Client
 from helpers import util
 from helpers.consts import TARGET_HOST, TARGET_PORT
+from reciever.server import Server
 
 
 class ProgramInterface:
+    """
+    main program class that can change between a sender and a receiver
+    """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.target_host = TARGET_HOST
         self.target_port = TARGET_PORT
         self.server = None
@@ -16,7 +19,11 @@ class ProgramInterface:
         self.choose_target()
         self.start_server()
 
-    def start_server(self):
+    def start_server(self) -> None:
+        """
+        method that creates a server that will listen on given IP and port
+        if server cannot be created for some reason program stops
+        """
         try:
             self.server = Server()
             self.server.bind(self.target_host, self.target_port, self)
@@ -27,7 +34,10 @@ class ProgramInterface:
             return
         self.command_loop()
 
-    def command_loop(self):
+    def command_loop(self) -> None:
+        """
+        main command loop that is used to send txt/file, close connection and exit the program
+        """
         while self.running:
             command = input("[COMMAND]: ")
             if command == 'send':
@@ -76,14 +86,23 @@ class ProgramInterface:
                 else:
                     print("[ERROR] Invalid argument (try: send, exit)")
 
-    def server_error(self):
+    def server_error(self) -> None:
+        """
+        method that is used to when a server error occurs to end program
+        """
         self.running = False
 
-    def connection_error(self):
+    def connection_error(self) -> None:
+        """
+        method that is called when sender could not connect to the receiver
+        """
         self.connected = False
         self.client = None
 
-    def choose_target(self):
+    def choose_target(self) -> None:
+        """
+        method that is used to get input from terminal and validate it
+        """
         while True:
             host = (input("[INPUT] Choose server host(default 127.0.0.1): "))
             if host == "":
@@ -105,7 +124,7 @@ class ProgramInterface:
                     print("[ERROR] Choose a valid port")
 
 
-def main():
+def main() -> None:
     ProgramInterface()
 
 

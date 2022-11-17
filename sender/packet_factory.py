@@ -2,14 +2,24 @@ import os
 import random
 import string
 
+from typing import List
 from helpers import util
 from helpers.consts import HEADER_SIZE, TXT, FILE, DATA, NO_FRAGMENT, FORMAT, SIMULATION_TXT_NUM_OF_PACKETS, \
-    SIMULATION_TXT_FRAGMENT_SIZE, SIMULATION_FILE_FRAGMENT_SIZE, SIMULATION_FILE_PATH
+    SIMULATION_TXT_FRAGMENT_SIZE
 
 
 class PacketFactory:
+    """
+    class that creates packets for message we want to transfer
+    """
     @staticmethod
-    def create_txt_packets(fragment_size, msg):
+    def create_txt_packets(fragment_size: int, msg: str) -> List[bytes]:
+        """
+        method that creates txt packet or packets if message needs to be fragmented
+        :param fragment_size: what will be the fragment size
+        :param msg: message we want to send
+        :return: packets created from message
+        """
         fragmented_packets = []
         if len(msg) > (int(fragment_size) - int(HEADER_SIZE)):
             fragment_count = 1
@@ -29,12 +39,18 @@ class PacketFactory:
             return header + checksum + txt_msg
 
     @staticmethod
-    def create_file_packets(file_path, fragment_size):
-        first_header = DATA + FILE + util.create_frag_from_num(1)
+    def create_file_packets(file_path: str, fragment_size: int) -> List[bytes]:
+        """
+        method that creates packets from file we want to send
+        :param file_path: path to file
+        :param fragment_size: what will be the fragment size
+        :return: list of created file packets
+        """
         packet_msg = os.path.basename(file_path).encode(FORMAT)
+        first_header = DATA + FILE + util.create_frag_from_num(1)
+        buffer = (fragment_size - HEADER_SIZE)
         checksum = util.create_check_sum(first_header + packet_msg)
         fragmented_packets = [first_header + checksum + packet_msg]
-        buffer = (fragment_size - HEADER_SIZE)
         fragment_count = 2
         with open(file_path, 'rb') as file:
             while True:
@@ -49,12 +65,17 @@ class PacketFactory:
         return fragmented_packets
 
     @staticmethod
-    def create_simulation_txt_packets():
+    def create_simulation_txt_packets() -> str and List[bytes]:
+        """
+        method that creates random message for error simulation
+        :return: list of txt packets
+        """
         simulation_packets = []
         generated_msg = ""
         for i in range(SIMULATION_TXT_NUM_OF_PACKETS):
             msg = ''.join(
-                random.choices(string.ascii_uppercase + string.digits, k=SIMULATION_TXT_FRAGMENT_SIZE - HEADER_SIZE)).encode(
+                random.choices(string.ascii_uppercase + string.digits,
+                               k=SIMULATION_TXT_FRAGMENT_SIZE - HEADER_SIZE)).encode(
                 FORMAT)
             generated_msg = generated_msg + msg.decode(FORMAT)
             packet_header = DATA + TXT + util.create_frag_from_num(i + 1)
@@ -62,23 +83,3 @@ class PacketFactory:
             simulation_packets.append(packet_header + checksum + msg)
 
         return generated_msg, simulation_packets
-
-    @staticmethod
-    def create_simulation_file_packets():
-        first_header = DATA + FILE + util.create_frag_from_num(1)
-        packet_msg = os.path.basename(SIMULATION_FILE_PATH).encode(FORMAT)
-        checksum = util.create_check_sum(first_header + packet_msg)
-        fragmented_packets = [first_header + checksum + packet_msg]
-        buffer = (SIMULATION_FILE_FRAGMENT_SIZE - HEADER_SIZE)
-        fragment_count = 2
-        with open(SIMULATION_FILE_PATH, 'rb') as file:
-            while True:
-                data = file.read(buffer)
-                if not data:
-                    break
-                packet_header = DATA + FILE + util.create_frag_from_num(fragment_count)
-                fragment_count += 1
-                checksum = util.create_check_sum(packet_header + data)
-                fragmented_packets.append(packet_header + checksum + data)
-
-        return fragmented_packets

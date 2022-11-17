@@ -1,3 +1,6 @@
+"""
+file that contains constants used in project
+"""
 # ------- Server consts -------
 TARGET_HOST = "127.0.0.1"
 TARGET_PORT = 2222
