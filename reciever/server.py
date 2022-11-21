@@ -2,8 +2,9 @@ import socket
 import threading
 from time import sleep
 
-from helpers.consts import PROTOCOL_SIZE
+from helpers.consts import PROTOCOL_SIZE, DOWNLOAD_PATH
 from reciever.client_handler import ClientHandler
+from helpers import util
 
 
 class Server(threading.Thread):
@@ -17,6 +18,7 @@ class Server(threading.Thread):
     active_connections = 0
     running = True
     program_interface = None
+    download_path = DOWNLOAD_PATH
 
     def __init__(self) -> None:
         super(Server, self).__init__()
@@ -125,3 +127,21 @@ class Server(threading.Thread):
         method that is used when we want to exit program or when error has occurred
         """
         self.running = False
+
+    def change_download_path(self) -> None:
+        """
+        method that is called when we want to change receiver download path
+        """
+        while True:
+            download_path = input("[INPUT] New download path: ")
+            if not util.validate_download_path(download_path):
+                print("[ERROR] Invalid download path")
+                continue
+            if download_path == "":
+                print(f"[INFO] Download was not changed: {self.download_path}")
+                break
+            if download_path[-1] != "/":
+                download_path += "/"
+
+            self.download_path = download_path
+            print(f"[INFO] Download changed to: {self.download_path}")

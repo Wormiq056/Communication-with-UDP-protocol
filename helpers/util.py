@@ -2,7 +2,7 @@ import ipaddress
 import os
 import zlib
 
-from helpers import consts
+from helpers.consts import LOWEST_FRAGMENT_SIZE, PROTOCOL_SIZE, FRAG_NUM_LENGTH, CHECKSUM_START, CHECKSUM_END
 
 
 def validate_ip_address(ip_string: str) -> bool:
@@ -54,7 +54,7 @@ def validate_fragment_size(size: str) -> bool:
         size = int(size)
     except ValueError:
         return False
-    if size < consts.LOWEST_FRAGMENT_SIZE or size > consts.PROTOCOL_SIZE:
+    if size < LOWEST_FRAGMENT_SIZE or size > PROTOCOL_SIZE:
         return False
     return True
 
@@ -77,7 +77,7 @@ def create_frag_from_num(num: int) -> bytes:
     """
     helper function that returns bytes from given int
     """
-    return num.to_bytes(consts.FRAG_NUM_LENGTH, 'big')
+    return num.to_bytes(FRAG_NUM_LENGTH, 'big')
 
 
 def create_check_sum(msg: bytes) -> bytes:
@@ -94,30 +94,27 @@ def compare_checksum(msg: bytes) -> bool:
     :param msg: received packet
     :return: check result
     """
-    sent_checksum = msg[consts.CHECKSUM_START:consts.CHECKSUM_END]
-    server_checksum = msg[:consts.CHECKSUM_START] + msg[consts.CHECKSUM_END:]
+    sent_checksum = msg[CHECKSUM_START:CHECKSUM_END]
+    server_checksum = msg[:CHECKSUM_START] + msg[CHECKSUM_END:]
     if zlib.crc32(server_checksum).to_bytes(4, 'big') != sent_checksum:
         return False
     return True
 
 
-def change_download_path() -> None:
+def validate_download_path(path: str) -> bool:
     """
-    function that validates download path and calls another function to change it
+    function that validates given download path
+    :param path: you want to check
+    :return: boolean result of validation
     """
-    while True:
-        download_path = input('[INPUT] New download path: ')
-        if download_path == "":
-            break
-        check = os.path.exists(download_path)
-        if not os.path.isdir(download_path):
-            print('[INFO] Path is not a dir')
-            continue
-        if not check:
-            print('[INFO] Path does not exists')
-            continue
-        if download_path[-1] != "/":
-            download_path += "/"
-        consts.change_download_path(download_path)
-        break
+    if path == "":
+        return True
+    check = os.path.exists(path)
+    if not os.path.isdir(path):
+        return False
+    if not check:
+        return False
+    return True
+
+
 

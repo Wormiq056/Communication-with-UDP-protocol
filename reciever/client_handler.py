@@ -5,7 +5,6 @@ from helpers import util
 from helpers.consts import HEADER_SIZE, PACKET_TYPE_START, PACKET_TYPE_END, ACK, FIN, REQUEST, \
     MSG_TYPE_START, MSG_TYPE_END, NONE, TXT, FILE, DATA, FRAG_NUM_START, FRAG_NUM_END, NO_FRAGMENT, \
     FAIL, FORMAT, FIRST_FILE_PACKET, SLIDING_WINDOW_SIZE
-from helpers import consts
 
 
 class ClientHandler:
@@ -17,7 +16,7 @@ class ClientHandler:
         self.addr = addr
         self.server = server
         self.connection_time = 6
-        self.file_name = ""
+        self.file_path = ""
         self.num_of_incorrect_packets = 0
         self.go_back_n_dict = {}
         self.correct_fragments = 0
@@ -86,7 +85,7 @@ class ClientHandler:
             return
         print(f'[CLIENT] {self.addr} fragment {int.from_bytes(msg[FRAG_NUM_START:FRAG_NUM_END], "big")} received')
         if msg[FRAG_NUM_START:FRAG_NUM_END] == FIRST_FILE_PACKET:
-            self.file_name = consts.DOWNLOAD_PATH + msg[HEADER_SIZE:].decode(FORMAT)
+            self.file_path = self.server.download_path + msg[HEADER_SIZE:].decode(FORMAT)
             self.create_and_send_response(ACK + NONE + msg[FRAG_NUM_START:FRAG_NUM_END])
             self.total_num_of_packets_received += 1
             self.correct_fragments += 1
@@ -138,8 +137,8 @@ class ClientHandler:
 
         elif msg[MSG_TYPE_START:MSG_TYPE_END] == FILE:
             self.dump_file()
-            print(f"[CLIENT] File was successfully downloaded and saved to : {self.file_name}")
-            self.file_name = ""
+            print(f"[CLIENT] File was successfully downloaded and saved to : {self.file_path}")
+            self.file_path = ""
 
         self.processed_msg = True
         self.go_back_n_dict.clear()
@@ -152,7 +151,7 @@ class ClientHandler:
         it also calculates file size in bytes
         """
         sorted_dict = collections.OrderedDict(sorted(self.go_back_n_dict.items()))
-        with open(self.file_name, 'wb') as file:
+        with open(self.file_path, 'wb') as file:
             for value in sorted_dict.values():
                 self.msg_byte_length += len(value)
                 file.write(value)

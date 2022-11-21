@@ -83,8 +83,7 @@ class ProgramInterface:
                 self.client = None
             elif command == "dir":
                 print("[INFO] Changing receiver download path")
-                util.change_download_path()
-                print(f"[INFO] Receiver download path changed to: {consts.DOWNLOAD_PATH}")
+                self.server.change_download_path()
             else:
                 if self.connected:
                     print("[ERROR] Invalid argument (try: send, close, dir, exit)")
