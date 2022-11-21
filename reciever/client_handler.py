@@ -4,8 +4,9 @@ from time import sleep
 from helpers import util
 from helpers.consts import HEADER_SIZE, PACKET_TYPE_START, PACKET_TYPE_END, ACK, FIN, REQUEST, \
     MSG_TYPE_START, MSG_TYPE_END, NONE, TXT, FILE, DATA, FRAG_NUM_START, FRAG_NUM_END, NO_FRAGMENT, \
-    FAIL, FORMAT, FIRST_FILE_PACKET, DOWNLOAD_PATH, SLIDING_WINDOW_SIZE
+    FAIL, FORMAT, FIRST_FILE_PACKET, SLIDING_WINDOW_SIZE
 from helpers import consts
+
 
 class ClientHandler:
     """
