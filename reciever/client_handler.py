@@ -5,7 +5,7 @@ from helpers import util
 from helpers.consts import HEADER_SIZE, PACKET_TYPE_START, PACKET_TYPE_END, ACK, FIN, REQUEST, \
     MSG_TYPE_START, MSG_TYPE_END, NONE, TXT, FILE, DATA, FRAG_NUM_START, FRAG_NUM_END, NO_FRAGMENT, \
     FAIL, FORMAT, FIRST_FILE_PACKET, DOWNLOAD_PATH, SLIDING_WINDOW_SIZE
-
+from helpers import consts
 
 class ClientHandler:
     """
@@ -22,6 +22,7 @@ class ClientHandler:
         self.correct_fragments = 0
         self.total_num_of_packets_received = 0
         self.msg_byte_length = 0
+        self.processed_msg = True
 
     def reset_connection_time(self) -> None:
         """
@@ -84,7 +85,7 @@ class ClientHandler:
             return
         print(f'[CLIENT] {self.addr} fragment {int.from_bytes(msg[FRAG_NUM_START:FRAG_NUM_END], "big")} received')
         if msg[FRAG_NUM_START:FRAG_NUM_END] == FIRST_FILE_PACKET:
-            self.file_name = DOWNLOAD_PATH + msg[HEADER_SIZE:].decode(FORMAT)
+            self.file_name = consts.DOWNLOAD_PATH + msg[HEADER_SIZE:].decode(FORMAT)
             self.create_and_send_response(ACK + NONE + msg[FRAG_NUM_START:FRAG_NUM_END])
             self.total_num_of_packets_received += 1
             self.correct_fragments += 1
@@ -124,6 +125,8 @@ class ClientHandler:
             self.create_and_send_response(REQUEST + FAIL + msg[FRAG_NUM_START:FRAG_NUM_END])
             return
         self.create_and_send_response(ACK + NONE + msg[FRAG_NUM_START:FRAG_NUM_END])
+        if self.processed_msg:
+            return
         if msg[MSG_TYPE_START:MSG_TYPE_END] == TXT:
             ordered_msg = collections.OrderedDict(sorted(self.go_back_n_dict.items()))
             client_msg = ""
@@ -137,6 +140,7 @@ class ClientHandler:
             print(f"[CLIENT] File was successfully downloaded and saved to : {self.file_name}")
             self.file_name = ""
 
+        self.processed_msg = True
         self.go_back_n_dict.clear()
         self.transmission_statistics()
 
@@ -175,6 +179,7 @@ class ClientHandler:
         """
         self.reset_connection_time()
         if msg[PACKET_TYPE_START:PACKET_TYPE_END] == DATA:
+            self.processed_msg = False
             self.process_data_packet(msg)
         elif msg[PACKET_TYPE_START:PACKET_TYPE_END] == FIN:
             self.process_fin(msg)

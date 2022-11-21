@@ -47,3 +47,12 @@ SIMULATION_TXT_NUM_OF_PACKETS = 8
 SIMULATION_TXT_FRAGMENT_SIZE = 16
 SIMULATION_FILE_FRAGMENT_SIZE = 50
 SIMULATION_FILE_PATH = "./tests/simulation_file.txt"
+
+
+def change_download_path(path: str) -> None:
+    """
+    function that changes downloads path
+    :param path: path to change to
+    """
+    global DOWNLOAD_PATH
+    DOWNLOAD_PATH = path

@@ -1,6 +1,7 @@
 from sender.client import Client
 from helpers import util
-from helpers.consts import TARGET_HOST, TARGET_PORT
+# from helpers.consts import TARGET_HOST, TARGET_PORT, DOWNLOAD_PATH
+from helpers import consts
 from reciever.server import Server
 
 
@@ -10,8 +11,8 @@ class ProgramInterface:
     """
 
     def __init__(self) -> None:
-        self.target_host = TARGET_HOST
-        self.target_port = TARGET_PORT
+        self.target_host = consts.TARGET_HOST
+        self.target_port = consts.TARGET_PORT
         self.server = None
         self.connected = False
         self.client = None
@@ -80,11 +81,15 @@ class ProgramInterface:
                 self.connected = False
                 self.client.close()
                 self.client = None
+            elif command == "dir":
+                print("[INFO] Changing receiver download path")
+                util.change_download_path()
+                print(f"[INFO] Receiver download path changed to: {consts.DOWNLOAD_PATH}")
             else:
                 if self.connected:
-                    print("[ERROR] Invalid argument (try: send, close, exit)")
+                    print("[ERROR] Invalid argument (try: send, close, dir, exit)")
                 else:
-                    print("[ERROR] Invalid argument (try: send, exit)")
+                    print("[ERROR] Invalid argument (try: send, dir, exit)")
 
     def server_error(self) -> None:
         """
