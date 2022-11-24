@@ -5,7 +5,7 @@ from typing import List
 
 from helpers import util
 from helpers.consts import PACKET_TYPE_START, PACKET_TYPE_END, ACK, FIN, REQUEST, MSG_TYPE_START, MSG_TYPE_END, NONE, \
-    NO_FRAGMENT, FAIL, PROTOCOL_SIZE, LOWEST_FRAGMENT_SIZE, TXT, FRAG_NUM_START, FRAG_NUM_END, SLIDING_WINDOW_SIZE, \
+    NO_FRAGMENT, FAIL, PROTOCOL_SIZE, LOWEST_FRAGMENT_SIZE, TXT, FRAG_NUM_START, FRAG_NUM_END, \
     FIRST_FILE_PACKET, NO_CHECKSUM, DATA, FILE, SIMULATION_FILE_PATH, HEADER_SIZE, SIMULATION_FILE_FRAGMENT_SIZE
 from sender.packet_factory import PacketFactory
 
@@ -159,57 +159,29 @@ class Client:
         self.transfer_statistics()
         print('[INFO] Message was sent successfully')
 
-    def send_created_packets(self, packets: List[bytes]) -> None:
-        """
-        method that sends number of packets (based on go back n ARQ) to the server
-        :param packets: packets we want to send
-        """
-        self.total_number_of_packets_send += len(packets)
-        for packet in packets:
-            self.send(packet)
-
-    def ack_sent_packets(self, packets: List[bytes]) -> bool:
-        """
-        method that waits for ACK from server, if only one packet is not acked client will send packets again,
-        based on go back n ARQ
-        :param packets: packets we want to check
-        :return: bool result if sending went smoothly
-        """
-        not_acked_packets = packets
-        while True:
-            try:
-                msg, addr = self.client.recvfrom(PROTOCOL_SIZE)
-                if not util.compare_checksum(msg):
-                    print("[ERROR] Server sent corrupted packet, resending packets")
-                if msg[PACKET_TYPE_START:PACKET_TYPE_END] == ACK:
-                    for packet in not_acked_packets:
-                        if packet[FRAG_NUM_START:FRAG_NUM_END] == msg[FRAG_NUM_START:FRAG_NUM_END]:
-                            not_acked_packets.remove(packet)
-                        if not not_acked_packets:
-                            return True
-                elif msg[PACKET_TYPE_START:PACKET_TYPE_END] == REQUEST:
-                    self.number_of_incorrect_packets_send += 1
-                    print("[ERROR] Server received corrupted packet, resending packets")
-                    return False
-            except TimeoutError:
-                print("[ERROR] Server did not ACK sent packet, resending packets")
-                self.number_of_incorrect_packets_send += 1
-                return False
-
     def frag_transfer(self, packets: List[bytes]) -> None:
         """
-        method that is called when message/file we want to send is fragmented, it handles transfer based on go back N
-        ARQ, if some data is lost it will sent N packets again
-        :param packets: fragmented packets we want to send
+        method that is called when wa want to send fragmented msg, it implements stop & wait ARQ method,
+        meaning we send one packet and wait for it's ACK if ACK is not received we sent it again
+        :param packets: packets we want to send
         """
-        not_acked_packets = packets
         msg_type: bytes = packets[0][MSG_TYPE_START:MSG_TYPE_END]
-        while not_acked_packets:
-            self.send_created_packets(not_acked_packets[:SLIDING_WINDOW_SIZE])
-            if self.ack_sent_packets(not_acked_packets[:SLIDING_WINDOW_SIZE]):
-                not_acked_packets = not_acked_packets[SLIDING_WINDOW_SIZE:]
-            else:
-                continue
+        for packet in packets:
+            while True:
+                try:
+                    self.send(packet)
+                    self.total_number_of_packets_send += 1
+                    msg, addr = self.client.recvfrom(PROTOCOL_SIZE)
+                    if not util.compare_checksum(msg):
+                        print("[ERROR] Server sent corrupted packet, resending packet")
+                    if msg[PACKET_TYPE_START:PACKET_TYPE_END] == ACK:
+                        if msg[FRAG_NUM_START:FRAG_NUM_END] == packet[FRAG_NUM_START:FRAG_NUM_END]:
+                            break
+                    print('[ERROR] Server received corrupted packet, resending packet')
+                    self.number_of_incorrect_packets_send += 1
+                except TimeoutError:
+                    print("[ERROR] Server did not receive packet, resending packet")
+                    continue
         while True:
             try:
                 self.create_and_send_packet(FIN + msg_type + util.create_frag_from_num(len(packets) + 1))
@@ -234,8 +206,8 @@ class Client:
         """
         method that is called after message was sent successfully, it display transfer statistics
         """
-        print(f"[STATISTICS] Packets needed for message transfer {self.msg_packet_length}")
         print(f"[STATISTICS] Message raw byte length {self.msg_byte_length} bytes")
+        print(f"[STATISTICS] Packets needed for message transfer {self.msg_packet_length}")
         print(f"[STATISTICS] Number of total packets sent {self.total_number_of_packets_send}")
         print(f"[STATISTICS] Number of incorrect packets sent {self.number_of_incorrect_packets_send}")
         self.msg_byte_length = 0
@@ -257,7 +229,7 @@ class Client:
         :param packets: packet/s we want to transfer
         """
         if isinstance(packets, bytes):
-            self.msg_packet_length = len(packets) - HEADER_SIZE
+            self.msg_packet_length = 1
             self.msg_byte_length += len(packets) - HEADER_SIZE
             self.no_frag_transfer(packets)
         elif isinstance(packets, list):
@@ -328,26 +300,44 @@ class Client:
         msg_type: bytes = packets[0][MSG_TYPE_START:MSG_TYPE_END]
         remaining_tries = 1
         first_packet = packets[0]
-        packets[0] = DATA + msg_type + FIRST_FILE_PACKET + NO_CHECKSUM
-        not_acked_packets = packets
-        while not_acked_packets:
-            self.send_created_packets(not_acked_packets[:SLIDING_WINDOW_SIZE])
-            if self.ack_sent_packets(not_acked_packets[:SLIDING_WINDOW_SIZE]):
-                not_acked_packets = not_acked_packets[SLIDING_WINDOW_SIZE:]
-            else:
-                if remaining_tries == 0:
-                    not_acked_packets[0] = first_packet
-                remaining_tries -= 1
-                continue
+        test_packets = packets.copy()
+        test_packets[0] = DATA + msg_type + FIRST_FILE_PACKET + NO_CHECKSUM
+        for packet in test_packets:
+            while True:
+                try:
+                    if remaining_tries == 0:
+                        packet = first_packet
+                    remaining_tries -= 1
+                    self.send(packet)
+                    self.total_number_of_packets_send += 1
+                    msg, addr = self.client.recvfrom(PROTOCOL_SIZE)
+                    if not util.compare_checksum(msg):
+                        print("[ERROR] Server sent corrupted packet, resending packet")
+                        continue
+                    if msg[PACKET_TYPE_START:PACKET_TYPE_END] == ACK:
+                        if msg[FRAG_NUM_START:FRAG_NUM_END] == packet[FRAG_NUM_START:FRAG_NUM_END]:
+                            break
+                    print('[ERROR] Server received corrupted packet, resending packet')
+                    self.number_of_incorrect_packets_send += 1
+
+                except TimeoutError:
+                    print("[ERROR] Server did not receive packet, resending packet")
+                    continue
+
         while True:
             try:
                 self.create_and_send_packet(FIN + msg_type + util.create_frag_from_num(len(packets) + 1))
                 msg, addr = self.client.recvfrom(PROTOCOL_SIZE)
+                if not util.compare_checksum(msg):
+                    print("[ERROR] Server sent corrupted packet, resending finalizing packet")
                 if msg[PACKET_TYPE_START:PACKET_TYPE_END] == ACK:
                     break
+                else:
+                    print("[ERROR] Server received corrupted packet, resending finalizing packet")
                 continue
             except TimeoutError:
                 continue
+
         self.transfer_statistics()
         if msg_type == TXT:
             print('[SIMULATION] Message was sent successfully')

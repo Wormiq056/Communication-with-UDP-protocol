@@ -1,10 +1,11 @@
+import os
 import collections
 from time import sleep
 
 from helpers import util
 from helpers.consts import HEADER_SIZE, PACKET_TYPE_START, PACKET_TYPE_END, ACK, FIN, REQUEST, \
     MSG_TYPE_START, MSG_TYPE_END, NONE, TXT, FILE, DATA, FRAG_NUM_START, FRAG_NUM_END, NO_FRAGMENT, \
-    FAIL, FORMAT, FIRST_FILE_PACKET, SLIDING_WINDOW_SIZE
+    FAIL, FORMAT, FIRST_FILE_PACKET
 
 
 class ClientHandler:
@@ -48,26 +49,21 @@ class ClientHandler:
         and creates a corresponding response
         :param msg: received TXT packet
         """
+        self.total_num_of_packets_received += 1
         if not util.compare_checksum(msg):
             print(f'[CLIENT] {self.addr} sent corrupted packet, sending error')
             self.num_of_incorrect_packets += 1
-            self.total_num_of_packets_received += 1
-            self.correct_fragments -= SLIDING_WINDOW_SIZE - 1
             self.create_and_send_response(REQUEST + FAIL + msg[FRAG_NUM_START:FRAG_NUM_END])
             return
-
+        self.correct_fragments += 1
         if msg[FRAG_NUM_START:FRAG_NUM_END] != NO_FRAGMENT:
-            self.correct_fragments += 1
-            self.total_num_of_packets_received += 1
             print(f'[CLIENT] {self.addr} fragment {int.from_bytes(msg[FRAG_NUM_START:FRAG_NUM_END], "big")} received')
             self.go_back_n_dict[int.from_bytes(msg[FRAG_NUM_START:FRAG_NUM_END], 'big')] = msg[HEADER_SIZE:]
             self.create_and_send_response(ACK + NONE + msg[FRAG_NUM_START:FRAG_NUM_END])
         else:
-            self.total_num_of_packets_received += 1
-            self.correct_fragments += 1
             print(f"[CLIENT] Message from {self.addr} client: " + msg[HEADER_SIZE:].decode(FORMAT))
             self.create_and_send_response(ACK + NONE + NO_FRAGMENT)
-            self.msg_byte_length += int.from_bytes(msg[HEADER_SIZE:], "big")
+            self.msg_byte_length += len(msg) - HEADER_SIZE
             self.transmission_statistics()
 
     def process_file_packet(self, msg: bytes) -> None:
@@ -76,10 +72,9 @@ class ClientHandler:
         and creates a corresponding response
         :param msg: FILE packet
         """
+        self.total_num_of_packets_received += 1
         if not util.compare_checksum(msg):
             self.num_of_incorrect_packets += 1
-            self.total_num_of_packets_received += 1
-            self.correct_fragments -= SLIDING_WINDOW_SIZE - 1
             print(f'[CLIENT] {self.addr} sent corrupted packet, sending error')
             self.create_and_send_response(REQUEST + FAIL + msg[FRAG_NUM_START:FRAG_NUM_END])
             return
@@ -87,13 +82,10 @@ class ClientHandler:
         if msg[FRAG_NUM_START:FRAG_NUM_END] == FIRST_FILE_PACKET:
             self.file_path = self.server.download_path + msg[HEADER_SIZE:].decode(FORMAT)
             self.create_and_send_response(ACK + NONE + msg[FRAG_NUM_START:FRAG_NUM_END])
-            self.total_num_of_packets_received += 1
-            self.correct_fragments += 1
         else:
             self.go_back_n_dict[int.from_bytes(msg[FRAG_NUM_START:FRAG_NUM_END], 'big')] = msg[HEADER_SIZE:]
             self.create_and_send_response(ACK + NONE + msg[FRAG_NUM_START:FRAG_NUM_END])
-            self.total_num_of_packets_received += 1
-            self.correct_fragments += 1
+        self.correct_fragments += 1
 
     def process_data_packet(self, msg: bytes) -> None:
         """
@@ -151,6 +143,7 @@ class ClientHandler:
         it also calculates file size in bytes
         """
         sorted_dict = collections.OrderedDict(sorted(self.go_back_n_dict.items()))
+        self.msg_byte_length += len(os.path.basename(self.file_path))
         with open(self.file_path, 'wb') as file:
             for value in sorted_dict.values():
                 self.msg_byte_length += len(value)
