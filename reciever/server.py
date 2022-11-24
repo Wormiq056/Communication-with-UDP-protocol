@@ -145,3 +145,4 @@ class Server(threading.Thread):
 
             self.download_path = download_path
             print(f"[INFO] Download changed to: {self.download_path}")
+            break
