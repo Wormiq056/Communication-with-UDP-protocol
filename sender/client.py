@@ -1,3 +1,4 @@
+import random
 import socket
 from threading import Thread
 from time import sleep
@@ -6,7 +7,7 @@ from typing import List
 from helpers import util
 from helpers.consts import PACKET_TYPE_START, PACKET_TYPE_END, ACK, FIN, REQUEST, MSG_TYPE_START, MSG_TYPE_END, NONE, \
     NO_FRAGMENT, FAIL, PROTOCOL_SIZE, LOWEST_FRAGMENT_SIZE, TXT, FRAG_NUM_START, FRAG_NUM_END, \
-    FIRST_FILE_PACKET, NO_CHECKSUM, DATA, FILE, SIMULATION_FILE_PATH, HEADER_SIZE, SIMULATION_FILE_FRAGMENT_SIZE
+    NO_CHECKSUM, DATA, FILE, SIMULATION_FILE_PATH, HEADER_SIZE, SIMULATION_FILE_FRAGMENT_SIZE
 from sender.packet_factory import PacketFactory
 
 
@@ -299,15 +300,16 @@ class Client:
         self.calculate_bytes_of_msg(packets)
         msg_type: bytes = packets[0][MSG_TYPE_START:MSG_TYPE_END]
         remaining_tries = 1
-        first_packet = packets[0]
+        random_num = random.randint(0, len(packets) - 1)
+        random_packet = packets[random_num]
         test_packets = packets.copy()
-        test_packets[0] = DATA + msg_type + FIRST_FILE_PACKET + NO_CHECKSUM
+        test_packets[random_num] = DATA + msg_type + util.create_frag_from_num(random_num + 1) + NO_CHECKSUM
         for packet in test_packets:
             while True:
                 try:
                     if remaining_tries == 0:
-                        packet = first_packet
-                    remaining_tries -= 1
+                        remaining_tries -= 1
+                        packet = random_packet
                     self.send(packet)
                     self.total_number_of_packets_send += 1
                     msg, addr = self.client.recvfrom(PROTOCOL_SIZE)
@@ -317,6 +319,7 @@ class Client:
                     if msg[PACKET_TYPE_START:PACKET_TYPE_END] == ACK:
                         if msg[FRAG_NUM_START:FRAG_NUM_END] == packet[FRAG_NUM_START:FRAG_NUM_END]:
                             break
+                    remaining_tries -= 1
                     print('[ERROR] Server received corrupted packet, resending packet')
                     self.number_of_incorrect_packets_send += 1
 
