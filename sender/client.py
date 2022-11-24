@@ -141,6 +141,8 @@ class Client:
         method that is called when message we want to send is not fragmented
         :param packet: packet we want to send
         """
+        remaining_tries = 3
+
         while True:
             try:
                 self.total_number_of_packets_send += 1
@@ -149,13 +151,22 @@ class Client:
                 if not util.compare_checksum(msg):
                     print("[ERROR] Server sent corrupted packet, resending packets")
                 if msg[PACKET_TYPE_START:PACKET_TYPE_END] == ACK:
-                    break
+                    if msg[FRAG_NUM_START:FRAG_NUM_END] == packet[FRAG_NUM_START:FRAG_NUM_END]:
+                        remaining_tries = 3
+                        break
                 else:
                     self.number_of_incorrect_packets_send += 1
                     print("[ERROR] Server received corrupted packet, resending packets")
                     continue
             except TimeoutError:
+                if remaining_tries <= 0:
+                    self.keep_connection_thread = False
+                    print(f'[ERROR] {self.target_host} is unreachable')
+                    self.program_interface.connection_error()
+                    return
+                remaining_tries -= 1
                 print("[ERROR] Server did not ACK packet resending packet")
+                print(f"[ERROR] Remaining tries {remaining_tries}")
                 continue
         self.transfer_statistics()
         print('[INFO] Message was sent successfully')
