@@ -177,6 +177,8 @@ class Client:
         meaning we send one packet and wait for it's ACK if ACK is not received we sent it again
         :param packets: packets we want to send
         """
+        remaining_tries = 3
+
         msg_type: bytes = packets[0][MSG_TYPE_START:MSG_TYPE_END]
         for packet in packets:
             while True:
@@ -188,12 +190,22 @@ class Client:
                         print("[ERROR] Server sent corrupted packet, resending packet")
                     if msg[PACKET_TYPE_START:PACKET_TYPE_END] == ACK:
                         if msg[FRAG_NUM_START:FRAG_NUM_END] == packet[FRAG_NUM_START:FRAG_NUM_END]:
+                            remaining_tries = 3
                             break
                     print('[ERROR] Server received corrupted packet, resending packet')
                     self.number_of_incorrect_packets_send += 1
                 except TimeoutError:
-                    print("[ERROR] Server did not receive packet, resending packet")
+                    if remaining_tries <= 0:
+                        self.keep_connection_thread = False
+                        print(f'[ERROR] {self.target_host} is unreachable')
+                        self.program_interface.connection_error()
+                        return
+                    remaining_tries -= 1
+                    print("[ERROR] Server did not ACK packet resending packet")
+                    print(f"[ERROR] Remaining tries {remaining_tries}")
                     continue
+
+        remaining_tries = 3
         while True:
             try:
                 self.create_and_send_packet(FIN + msg_type + util.create_frag_from_num(len(packets) + 1))
@@ -206,6 +218,14 @@ class Client:
                     print("[ERROR] Server received corrupted packet, resending finalizing packet")
                 continue
             except TimeoutError:
+                if remaining_tries <= 0:
+                    self.keep_connection_thread = False
+                    print(f'[ERROR] {self.target_host} is unreachable')
+                    self.program_interface.connection_error()
+                    return
+                remaining_tries -= 1
+                print("[ERROR] Server did not ACK packet resending packet")
+                print(f"[ERROR] Remaining tries {remaining_tries}")
                 continue
 
         self.transfer_statistics()
