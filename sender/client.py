@@ -197,7 +197,7 @@ class Client:
                 except TimeoutError:
                     if remaining_tries <= 0:
                         self.keep_connection_thread = False
-                        print(f'[ERROR] {self.target_host} is unreachable')
+                        print(f'[ERROR] {self.target_host} has been timed out')
                         self.program_interface.connection_error()
                         return
                     remaining_tries -= 1
@@ -220,7 +220,7 @@ class Client:
             except TimeoutError:
                 if remaining_tries <= 0:
                     self.keep_connection_thread = False
-                    print(f'[ERROR] {self.target_host} is unreachable')
+                    print(f'[ERROR] {self.target_host} has been timed out')
                     self.program_interface.connection_error()
                     return
                 remaining_tries -= 1
@@ -335,6 +335,7 @@ class Client:
         random_packet = packets[random_num]
         test_packets = packets.copy()
         test_packets[random_num] = DATA + msg_type + util.create_frag_from_num(random_num + 1) + NO_CHECKSUM
+        remaining_timeout = 3
         for packet in test_packets:
             while True:
                 try:
@@ -355,7 +356,14 @@ class Client:
                     self.number_of_incorrect_packets_send += 1
 
                 except TimeoutError:
-                    print("[ERROR] Server did not receive packet, resending packet")
+                    if remaining_timeout <= 0:
+                        self.keep_connection_thread = False
+                        print(f'[ERROR] {self.target_host} has been timed out')
+                        self.program_interface.connection_error()
+                        return
+                    remaining_timeout -= 1
+                    print("[ERROR] Server did not ACK packet resending packet")
+                    print(f"[ERROR] Remaining tries {remaining_tries}")
                     continue
 
         while True:
