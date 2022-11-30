@@ -37,6 +37,7 @@ class ClientHandler:
         """
         while self.connection_time != 0 and self.server.running:
             if self.server.stopped():
+                self.connection_time = 6
                 sleep(1)
                 continue
             sleep(1)
