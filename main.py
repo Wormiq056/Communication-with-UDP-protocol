@@ -1,7 +1,7 @@
 from sender.client import Client
 from helpers import util
-# from helpers.consts import TARGET_HOST, TARGET_PORT, DOWNLOAD_PATH
-from helpers import consts
+from helpers.consts import TARGET_HOST, TARGET_PORT
+
 from reciever.server import Server
 
 
@@ -11,8 +11,8 @@ class ProgramInterface:
     """
 
     def __init__(self) -> None:
-        self.target_host = consts.TARGET_HOST
-        self.target_port = consts.TARGET_PORT
+        self.target_host = TARGET_HOST
+        self.target_port = TARGET_PORT
         self.server = None
         self.connected = False
         self.client = None

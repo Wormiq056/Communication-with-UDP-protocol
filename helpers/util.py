@@ -82,7 +82,7 @@ def create_frag_from_num(num: int) -> bytes:
 
 def create_check_sum(msg: bytes) -> bytes:
     """
-    helper function that returns given str in bytes
+    helper function that returns given packet in bytes
     """
     checksum = zlib.crc32(msg).to_bytes(4, 'big')
     return checksum
