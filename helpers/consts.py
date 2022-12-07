@@ -10,7 +10,7 @@ FORMAT = 'utf-8'
 # ------- Protocol consts -------
 HEADER_SIZE = 14
 PROTOCOL_SIZE = 1472
-LOWEST_FRAGMENT_SIZE = 20
+LOWEST_FRAGMENT_SIZE = 6
 
 # ------- Packet Type -------
 PACKET_TYPE_START = 0

@@ -280,8 +280,8 @@ class Client:
             print("[ERROR] Choose a valid message type")
         while True:
             fragment_size = input(
-                f"[INPUT] What will be the fragment size?(default/max = {PROTOCOL_SIZE} bytes,"
-                f" lowest = {LOWEST_FRAGMENT_SIZE} bytes): ")
+                f"[INPUT] What will be the fragment size?(default/max = {PROTOCOL_SIZE - HEADER_SIZE} bytes,"
+                f" lowest = {LOWEST_FRAGMENT_SIZE} bytes): ") + HEADER_SIZE
             if fragment_size == "":
                 fragment_size = PROTOCOL_SIZE
                 break
