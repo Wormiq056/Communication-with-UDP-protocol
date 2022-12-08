@@ -40,7 +40,14 @@ class ProgramInterface:
         main command loop that is used to send txt/file, close connection and exit the program
         """
         while self.running:
-            command = input("[COMMAND]: ")
+            try:
+                command = input("[COMMAND]: ")
+            except KeyboardInterrupt:
+                print("[INFO] Closing program")
+                if self.connected:
+                    self.client.close()
+                self.server.close()
+                break
             if command == 'send':
                 self.server.pause()
                 if not self.client:
@@ -129,8 +136,13 @@ class ProgramInterface:
 
 
 def main() -> None:
-    ProgramInterface()
-
+    try:
+        app = ProgramInterface()
+    except KeyboardInterrupt:
+        # if app.connected:
+        #     app.client.close()
+        #     app.server.close()
+        exit()
 
 if __name__ == '__main__':
     main()
