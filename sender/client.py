@@ -280,7 +280,7 @@ class Client:
             print("[ERROR] Choose a valid message type")
         while True:
             fragment_size = input(
-                f"[INPUT] What will be the fragment size?(default/max = {PROTOCOL_SIZE - HEADER_SIZE} bytes,"
+                f"[INPUT] What will be the fragment size?(default/max = {PROTOCOL_SIZE} bytes,"
                 f" lowest = {LOWEST_FRAGMENT_SIZE} bytes): ")
             if fragment_size == "":
                 fragment_size = PROTOCOL_SIZE
@@ -293,7 +293,7 @@ class Client:
             if msg == "":
                 self.simulate_error(TXT)
             else:
-                packets = PacketFactory.create_txt_packets(int(fragment_size) + HEADER_SIZE, msg)
+                packets = PacketFactory.create_txt_packets(int(fragment_size), msg)
                 self.start_transfer(packets)
         else:
             while True:
@@ -304,7 +304,7 @@ class Client:
             if file_path == "":
                 self.simulate_error(FILE)
             else:
-                packets = PacketFactory.create_file_packets(file_path, int(fragment_size) + HEADER_SIZE)
+                packets = PacketFactory.create_file_packets(file_path, int(fragment_size))
                 self.start_transfer(packets)
 
     def simulate_error(self, test_type: bytes) -> None:

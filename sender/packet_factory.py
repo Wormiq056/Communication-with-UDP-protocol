@@ -12,6 +12,7 @@ class PacketFactory:
     """
     class that creates packets for message we want to transfer
     """
+
     @staticmethod
     def create_txt_packets(fragment_size: int, msg: str) -> List[bytes]:
         """
@@ -20,7 +21,9 @@ class PacketFactory:
         :param msg: message we want to send
         :return: packets created from message
         """
+        #shifted_msg = PacketFactory.shift(msg, 3)
         fragmented_packets = []
+        #msg = "_BEGIN_" + shifted_msg + "_END_"
         if len(msg) > (int(fragment_size) - int(HEADER_SIZE)):
             fragment_count = 1
             while msg:
@@ -37,6 +40,17 @@ class PacketFactory:
             txt_msg = msg.encode(FORMAT)
             checksum = util.create_check_sum(header + txt_msg)
             return header + checksum + txt_msg
+
+    @staticmethod
+    def shift(text, s):
+        result = ""
+        for i in range(len(text)):
+            char = text[i]
+            if (char.isupper()):
+                result += chr((ord(char) + s) % 128)
+            else:
+                result += chr((ord(char) + s) % 128)
+        return result
 
     @staticmethod
     def create_file_packets(file_path: str, fragment_size: int) -> List[bytes]:
