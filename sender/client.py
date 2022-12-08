@@ -130,10 +130,10 @@ class Client:
         """
         method that is called when we want to close connection to the server
         """
-        self.keep_connection_thread = False
-        if self.connection_thread.is_alive():
+        if self.keep_connection_thread:
             print(f"[INFO] Closing connection to {self.target_host, self.target_port}")
-            self.connection_thread.join()
+
+        self.keep_connection_thread = False
         self.create_and_send_packet(REQUEST + FAIL + NO_FRAGMENT)
 
     def no_frag_transfer(self, packet) -> None:
